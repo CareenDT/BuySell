@@ -5,15 +5,14 @@ from flask_restful import Api, Resource, abort, reqparse
 from data import db_session
 from data.products import Products
 
-CODEC_MAP = {"owner", "name", "description", "pricing", "created_date", "modified_date"}
+CODEC_MAP = {"id", "owner", "name", "description", "pricing", "created_date", "modified_date"}
 
 parser = reqparse.RequestParser()
 
 parser.add_argument("owner", required=True, type=int)
-parser.add_argument("name", required=True)
-parser.add_argument("description", required=True)
+parser.add_argument("name")
+parser.add_argument("description")
 parser.add_argument("pricing", required=True)
-parser.add_argument("created_date", required=True)
 
 def abort_if_product_not_found(id):
     session = db_session.create_session()
@@ -64,10 +63,10 @@ class ProductListResource(Resource):
     def post(self):
         session = db_session.create_session()
         product = Products(
-            owner = flask.request.json["owner"],
-            name = flask.request.json["name"],
-            description = flask.request.json["description"],
-            pricing = flask.request.json["pricing"],
+            owner = flask.request.json.get("owner", 0),
+            name = flask.request.json.get("name", None),
+            description = flask.request.json.get("description", None),
+            pricing = flask.request.json.get("pricing", 0)
         )
         session.add(product)
         session.commit()

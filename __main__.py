@@ -13,8 +13,13 @@ api = Api(app)
 @app.route("/index")
 @app.route("/")
 def index():
+    response: dict = get(f"http://127.0.0.1:8080/api/product").json()
+    return render_template("index.html", title="BuySellTemplate", products = response["products"])
 
-    return render_template("index.html", title="BuySellTemplate", con=get(f"http://localhost:8080/api/product").json())
+@app.route("/product_list")
+def products():
+    response: dict = get(f"http://127.0.0.1:8080/api/product").json()
+    return render_template("products.html", title="BuySellTemplate > Products", products = response["products"])
 
 def main():
     db_session.global_init("db/store.db")
