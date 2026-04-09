@@ -61,7 +61,13 @@ class ProductListResource(Resource):
         )
     
     def post(self):
+        if not flask.request.json:
+            return flask.make_response(flask.jsonify({'error': 'Empty request'}), 400)
+        elif not all(key in flask.request.json for key in ["owner", "pricing"]):
+            return flask.make_response(flask.jsonify({'error': 'Bad request'}), 400)
+        
         session = db_session.create_session()
+
         product = Products(
             owner = flask.request.json.get("owner", 0),
             name = flask.request.json.get("name", None),
