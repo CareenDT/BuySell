@@ -5,6 +5,8 @@ from flask import Flask, jsonify, make_response, redirect, render_template, requ
 from flask_login import LoginManager, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
+from sqlalchemy.sql.functions import current_user
+
 from data import db_session
 from data.__all_models import User, Products
 from forms.user import LoginForm, RegisterForm
@@ -18,6 +20,15 @@ app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=1)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+
+current_user = {
+    "id" : None,
+    "username" : None,
+    "email" : None,
+    "about" : None,
+    "joined_date" : None,
+    "hashed_password" : None
+    }
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -40,6 +51,15 @@ def index():
 def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     return render_template("products.html", title="BuySellTemplate > Products", products = response["products"])
+
+@app.route("/view_product/<int:product_id>")
+def view_product(product_id):
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    return render_template("view_product.html", title="Продукт", product = response["product"])
+
+@app.route("/profile")
+def profile():
+    return render_template("profile.html", title=f"Профиль: {current_user['username']}", user=current_user)
 
 @app.route('/register', methods=['GET', 'POST'])
 def reqister():
@@ -75,6 +95,14 @@ def login():
         user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
+
+            current_user["username"] = user.username
+            current_user["email"] = user.email
+            current_user["about"] = user.about
+            current_user["joined_date"] = user.joined_date
+            current_user["hashed_password"] = user.hashed_password
+            current_user["id"] = user.id
+
             return redirect("/")
         return render_template('login.html',
                                message="Invalid login information",
@@ -95,7 +123,7 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    app.run("0.0.0.0", 8080)
+    app.run("127.0.0.1", 8080)
 
 if __name__ == "__main__":
     main()

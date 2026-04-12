@@ -16,6 +16,3 @@ class Products(SqlAlchemyBase, SerializerMixin):
 
     created_date = Column(DateTime, default=datetime.datetime.now())
     modified_date = Column(DateTime, nullable=True)
-
-    user = orm.relationship("User")
-    

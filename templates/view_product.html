@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>{{item["name"]}}</h1>
-    <h4>{{}}</h4>
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ product["name"] }}</h2>
+                </div>
+                <div class="card-body">
+                    <h4>Описание</h4>
+                    <p>{{ product["description"] }}</p>
+                    <h4>Цена</h4>
+                    <p>{{ product["pricing"] }} ₽</p>
+                    <h4>Был создан</h4>
+                    <p>{{ product["created_date"] }}</p>
+                </div>
+                <div class="card-footer">
+                    <a href="/product_list" class="btn btn-secondary">Назад</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

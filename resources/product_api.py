@@ -26,7 +26,7 @@ class ProductResource(Resource):
         session = db_session.create_session()
         product = session.get(Products, product_id)
 
-        return jsonify({'news': product.to_dict(
+        return jsonify({'product': product.to_dict(
             only=CODEC_MAP)})
     
     def update(self, product_id):
