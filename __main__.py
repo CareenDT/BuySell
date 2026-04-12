@@ -95,7 +95,7 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    app.run("127.0.0.1", 8080)
+    app.run("0.0.0.0", 8080)
 
 if __name__ == "__main__":
     main()

@@ -9,7 +9,6 @@ class Products(SqlAlchemyBase, SerializerMixin):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    owner = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     name = Column(String, nullable = False, default="Unnamed product")
     description = Column(String, nullable = True, default="This product has no description")

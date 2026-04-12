@@ -5,11 +5,10 @@ from flask_restful import Api, Resource, abort, reqparse
 from data import db_session
 from data.products import Products
 
-CODEC_MAP = {"id", "owner", "name", "description", "pricing", "created_date", "modified_date"}
+CODEC_MAP = {"id", "name", "description", "pricing", "created_date", "modified_date"}
 
 parser = reqparse.RequestParser()
 
-parser.add_argument("owner", required=True, type=int)
 parser.add_argument("name")
 parser.add_argument("description")
 parser.add_argument("pricing", required=True)
