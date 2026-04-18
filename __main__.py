@@ -10,6 +10,7 @@ from sqlalchemy.sql.functions import current_user
 from data import db_session
 from data.__all_models import User, Products
 from forms.user import LoginForm, RegisterForm
+from resources.chat_api import ChatListResource, ChatResource
 from resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm
 
@@ -34,6 +35,9 @@ current_user = {
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
+
+
+
     return db_sess.get(User,user_id)
 
 @app.route('/logout')
@@ -89,7 +93,7 @@ def sell_product():
 
 
 @app.route('/register', methods=['GET', 'POST'])
-def reqister():
+def register():
     form = RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
@@ -116,6 +120,9 @@ def reqister():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
+    
+
     form = LoginForm()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
@@ -149,6 +156,9 @@ def main():
 
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
+
+    api.add_resource(ChatResource, "/api/chat/<int:chat_id>")
+    api.add_resource(ChatListResource, "/api/chat")
 
     app.run("127.0.0.1", 8080)
 

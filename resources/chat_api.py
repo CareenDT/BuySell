@@ -5,7 +5,7 @@ from flask_restful import Api, Resource, abort, reqparse
 from data import db_session
 from data.chats import Chat
 
-CODEC_MAP = {"id", "owner", "created_date"}
+CODEC_MAP = {"id", "owner", "created_date", "contents"}
 
 parser = reqparse.RequestParser()
 
@@ -53,23 +53,21 @@ class ChatListResource(Resource):
         chats = session.query(Chat).all()
         return jsonify(
             {
-                "Chat": [x.to_dict(only=CODEC_MAP) for x in chats]
+                "chats": [x.to_dict(only=CODEC_MAP) for x in chats]
             }
         )
     
     def post(self):
         if not flask.request.json:
             return flask.make_response(flask.jsonify({'error': 'Empty request'}), 400)
-        elif not all(key in flask.request.json for key in ["owner"]):
+        elif not all(key in flask.request.json for key in ["owner", "recipient"]):
             return flask.make_response(flask.jsonify({'error': 'Bad request'}), 400)
         
         session = db_session.create_session()
 
         chat = Chat(
             owner = flask.request.json.get("owner", 0),
-            name = flask.request.json.get("name", None),
-            description = flask.request.json.get("description", None),
-            pricing = flask.request.json.get("pricing", 0)
+            recipient = flask.request.json.get("recipient", 0),
         )
         session.add(chat)
         session.commit()
