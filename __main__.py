@@ -11,6 +11,7 @@ from data import db_session
 from data.__all_models import User, Products
 from forms.user import LoginForm, RegisterForm
 from resources.product_api import ProductListResource, ProductResource
+from forms.product import ProductForm
 
 app = Flask(__name__)
 api = Api(app)
@@ -55,11 +56,37 @@ def products():
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
-    return render_template("view_product.html", title="Продукт", product = response["product"])
+    return render_template("view_product.html", title="Продукт", product=response["product"])
 
 @app.route("/profile")
 def profile():
     return render_template("profile.html", title=f"Профиль: {current_user['username']}", user=current_user)
+
+
+@app.route("/sell_product", methods=['GET', 'POST'])
+@login_required
+def sell_product():
+    form = ProductForm()
+
+    if form.validate_on_submit():
+
+        data = {
+            "owner": current_user["id"],
+            "name": form.name.data,
+            "description": form.description.data,
+            "pricing": form.price.data
+        }
+
+        response = post("http://127.0.0.1:8080/api/product", json=data)
+
+        if response.status_code == 200:
+            return redirect("/product_list")
+        else:
+            return render_template("sell_product.html", title="Продать товар", form=form,
+                                   message=f"Ошибка при добавлении товара: {response.status_code}")
+
+    return render_template("sell_product.html", title="Продать товар", form=form)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def reqister():

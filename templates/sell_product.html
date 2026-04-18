@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-3">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <form action="" method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="card-header">
+                        <h2>Продажа товара</h2>
+                    </div>
+                    <div class="card-body">
+                        <h6>Название</h6>
+                        <p>
+                            {{ form.name(class="form-control") }}<br>
+                            {% for error in form.name.errors %}
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </p>
+                        <h6>Описание</h6>
+                        <p>
+                            {{ form.description(class="form-control") }}<br>
+                            {% for error in form.description.errors %}
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </p>
+                        <h6>Цена</h6>
+                        <p>
+                            {{ form.price(class="form-control") }}<br>
+                            {% for error in form.price.errors %}
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a>{{ form.submit(type="submit", class="btn btn-secondary") }}</a>
+                        <a href="/product_list" class="btn btn-secondary product-page-button cancel">Назад</a>
+                    </div>
+                    {{ message }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

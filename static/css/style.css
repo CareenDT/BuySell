@@ -21,3 +21,7 @@
     bottom: 10px;
     color: #707070;
 }
+
+.product-page-button.cancel {
+    position: absolute; right: 10px;
+}
