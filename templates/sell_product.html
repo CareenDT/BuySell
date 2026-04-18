@@ -1,51 +1,50 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-3">
     <div class="row">
-        <div class="col-md-6 mx-auto">
+        <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3>Продать товар</h3>
-                </div>
-                <div class="card-body">
-                    {% if message %}
-                        <div class="alert alert-danger">{{ message }}</div>
-                    {% endif %}
-
-                    <form method="POST">
-                        {{ form.hidden_tag() }}
-
-                        <div class="mb-3">
-                            {{ form.name.label(class="form-label") }}
-                            {{ form.name(class="form-control", placeholder="Введите название товара") }}
+                <form action="" method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="card-header">
+                        <h2>Продажа товара</h2>
+                    </div>
+                    <div class="card-body">
+                        <h6>Название</h6>
+                        <p>
+                            {{ form.name(class="form-control") }}<br>
                             {% for error in form.name.errors %}
-                                <div class="text-danger">{{ error }}</div>
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
                             {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.description.label(class="form-label") }}
-                            {{ form.description(class="form-control", rows=5, placeholder="Опишите ваш товар") }}
+                        </p>
+                        <h6>Описание</h6>
+                        <p>
+                            {{ form.description(class="form-control") }}<br>
                             {% for error in form.description.errors %}
-                                <div class="text-danger">{{ error }}</div>
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
                             {% endfor %}
-                        </div>
-
-                        <div class="mb-3">
-                            {{ form.price.label(class="form-label") }}
-                            {{ form.price(class="form-control", placeholder="Цена в рублях", type="number", step="0.01") }}
+                        </p>
+                        <h6>Цена</h6>
+                        <p>
+                            {{ form.price(class="form-control") }}<br>
                             {% for error in form.price.errors %}
-                                <div class="text-danger">{{ error }}</div>
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
                             {% endfor %}
-                        </div>
-
-                        {{ form.submit(class="btn btn-primary w-100") }}
-                    </form>
-                </div>
-                <div class="card-footer">
-                    <a href="/product_list" class="btn btn-secondary w-100">Назад к списку</a>
-                </div>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a>{{ form.submit(type="submit", class="btn btn-secondary") }}</a>
+                        <a href="/product_list" class="btn btn-secondary product-page-button cancel">Назад</a>
+                    </div>
+                    {{ message }}
+                </form>
             </div>
         </div>
     </div>

@@ -71,17 +71,18 @@ def sell_product():
     if form.validate_on_submit():
 
         data = {
-            "owner_id": current_user.id,
+            "owner": current_user["id"],
             "name": form.name.data,
             "description": form.description.data,
             "pricing": form.price.data
         }
+
         response = post("http://127.0.0.1:8080/api/product", json=data)
 
         if response.status_code == 200:
             return redirect("/product_list")
         else:
-            return render_template("sell.html", title="Продать товар", form=form,
+            return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Ошибка при добавлении товара: {response.status_code}")
 
     return render_template("sell_product.html", title="Продать товар", form=form)
