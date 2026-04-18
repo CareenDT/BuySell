@@ -11,13 +11,14 @@ parser = reqparse.RequestParser()
 
 parser.add_argument("name")
 parser.add_argument("description")
+parser.add_argument("owner")
 parser.add_argument("pricing", required=True)
 
 def abort_if_product_not_found(id):
     session = db_session.create_session()
     product = session.query(Products).get(id)
     if not product:
-        abort(404, message = flask.make_response(flask.jsonify({"error": f"News, indexed: {id} , are not found"}), 404))
+        abort(404, message = flask.make_response(flask.jsonify({"error": f"Products, indexed: {id} , are not found"}), 404))
 
 class ProductResource(Resource):
     def get(self, product_id):
