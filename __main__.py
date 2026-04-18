@@ -17,7 +17,7 @@ app = Flask(__name__)
 api = Api(app)
 
 app.config["SECRET_KEY"] = os.urandom(16).hex()
-app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=1)
+app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
