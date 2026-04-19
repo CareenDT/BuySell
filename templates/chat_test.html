@@ -7,19 +7,37 @@
 
     <script>
         const board = document.getElementById("board")
+        const header = document.getElementById("header")
+        const warning_msg = document.createElement("div")
+
+        warning_msg.className = "alert alert-danger"
+        warning_msg.role = "alert"
+        warning_msg.innerHTML = "There was a problem connecting to our server. Please standby."
 
         async function update(params) {
-            const response = await fetch("http://127.0.0.1:8080/api/chat/1")
-            const data = await response.json()
-        
-            board.replaceChildren()
-        
-            data["chat"]["contents"].forEach(element => {
-                let p = document.createElement("li")
-                p.innerHTML = element["text"]
-            
-                board.appendChild(p)
-            });
+            try {
+                const response = await fetch("http://127.0.0.1:8080/api/chat/1")
+                const data = await response.json()
+                
+                board.replaceChildren()
+
+                if (header.contains(warning_msg)) {
+                    header.removeChild(warning_msg)
+                }
+                
+                data["chat"]["contents"].forEach(element => {
+                    let p = document.createElement("li")
+                    p.innerHTML = element["text"]
+                
+                    board.appendChild(p)
+                });
+            } catch (error) {
+                console.warn(error);
+                
+                if (!header.contains(warning_msg)) {
+                    header.appendChild(warning_msg)
+                }
+            }
         }
 
         setInterval(update, 3000)
