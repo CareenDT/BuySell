@@ -14,6 +14,13 @@ from resources.chat_api import ChatListResource, ChatResource
 from resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm
 
+import logging
+
+logging.basicConfig(
+    filename="RuntimeOutput.log",
+    format='%(asctime)s %(levelname)s %(name)s %(message)s'
+)
+
 app = Flask(__name__)
 api = Api(app)
 
