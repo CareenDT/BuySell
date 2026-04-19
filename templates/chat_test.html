@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <ul id="board" class="list-group">
+        
+    </ul>
+
+    <script>
+        const board = document.getElementById("board")
+
+        async function update(params) {
+            const response = await fetch("http://127.0.0.1:8080/api/chat/1")
+            const data = await response.json()
+        
+            board.replaceChildren()
+        
+            data["chat"]["contents"].forEach(element => {
+                let p = document.createElement("li")
+                p.innerHTML = element["text"]
+            
+                board.appendChild(p)
+            });
+        }
+
+        setInterval(update, 3000)
+
+    </script>
+{% endblock %}

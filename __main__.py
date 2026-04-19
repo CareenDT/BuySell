@@ -23,22 +23,16 @@ app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-current_user = {
-    "id" : None,
-    "username" : None,
-    "email" : None,
-    "about" : None,
-    "joined_date" : None,
-    "hashed_password" : None
-    }
-
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
 
-
-
     return db_sess.get(User,user_id)
+
+@app.route("/chat_test")
+def chat_test():
+    return render_template("chat_test.html")
+
 
 @app.route('/logout')
 @login_required
@@ -121,21 +115,12 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    
-
     form = LoginForm()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         user = db_sess.query(User).filter(User.email == form.email.data).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember_me.data)
-
-            current_user["username"] = user.username
-            current_user["email"] = user.email
-            current_user["about"] = user.about
-            current_user["joined_date"] = user.joined_date
-            current_user["hashed_password"] = user.hashed_password
-            current_user["id"] = user.id
 
             return redirect("/")
         return render_template('login.html',
