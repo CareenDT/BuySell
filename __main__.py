@@ -1,11 +1,11 @@
 import datetime
+import logging
 import os
 
-from flask import Flask, jsonify, make_response, redirect, render_template, request, url_for
-from flask_login import LoginManager, login_required, login_user, logout_user
+from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
-from sqlalchemy.sql.functions import current_user
 
 from data import db_session
 from data.__all_models import User, Products
@@ -14,12 +14,11 @@ from resources.chat_api import ChatListResource, ChatResource
 from resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm
 
-import logging
-
-logging.basicConfig(
-    filename="RuntimeOutput.log",
-    format='%(asctime)s %(levelname)s %(name)s %(message)s'
-)
+# logging.basicConfig(
+#     filename="RuntimeOutput.log",
+#     format='%(message)s',
+#     encoding="utf-8",
+# )
 
 app = Flask(__name__)
 api = Api(app)
@@ -35,11 +34,6 @@ def load_user(user_id):
     db_sess = db_session.create_session()
 
     return db_sess.get(User,user_id)
-
-@app.route("/chat_test")
-def chat_test():
-    return render_template("chat_test.html")
-
 
 @app.route('/logout')
 @login_required
@@ -76,7 +70,7 @@ def sell_product():
     if form.validate_on_submit():
 
         data = {
-            "owner": current_user["id"],
+            "owner": current_user.id,
             "name": form.name.data,
             "description": form.description.data,
             "pricing": form.price.data
@@ -88,9 +82,9 @@ def sell_product():
             return redirect("/product_list")
         else:
             return render_template("sell_product.html", title="Продать товар", form=form,
-                                   message=f"Ошибка при добавлении товара: {response.status_code}")
+                                   message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title="Продать товар", form=form)
+    return render_template("sell_product.html", title="Put on sale", form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -135,13 +129,32 @@ def login():
                                form=form)
     return render_template('login.html', title='Авторизация', form=form)
 
+@app.route("/chat/<int:chat_id>")
+@login_required
+def chat(chat_id):
+
+    first_response = get(f"http://127.0.0.1:8080/api/chat/{chat_id}")
+    data = first_response.json()
+
+    if first_response.status_code != 200:
+        return first_response
+    print(data)
+    if current_user.id in [data["owner"], data["recipient"]]:
+        return render_template("chat.html", title = "BuySellTemplate > Chat", chat_id=chat_id, current_user=current_user)
+    else:
+        abort(403)
+
 @app.errorhandler(404)
 def not_found(error):
     return make_response(jsonify({"error":"NotFound"}), 404)
 
 @app.errorhandler(400)
 def bad_request(error):
-    return make_response(jsonify({"error":"BadRequest"}), 400)
+    return make_response(jsonify({"error":"Bad Request"}), 400)
+
+@app.errorhandler(403)
+def bad_request(error):
+    return make_response(jsonify({"error":"Forbidden"}), 403)
 
 def main():
     db_session.global_init("db/store.db")

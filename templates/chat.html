@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 
+{% block at_head_end %}
+<link rel="stylesheet"
+    type="text/css"
+    href="{{
+    url_for('static', filename='css/chat_style.css')
+    }}">
+{% endblock %}
+
 {% block content %}
+        
     <ul id="board" class="list-group">
         
     </ul>
@@ -15,33 +24,44 @@
         warning_msg.innerHTML = "There was a problem connecting to our server. Please standby."
         warning_msg.align = "center"
 
-        async function update(params) {
+        async function update() {
             try {
-                const response = await fetch("http://127.0.0.1:8080/api/chat/1")
+                const response = await fetch("http://127.0.0.1:8080/api/chat/{{ chat_id }}")
                 const data = await response.json()
-                
+
                 board.replaceChildren()
 
                 if (header.contains(warning_msg)) {
                     header.removeChild(warning_msg)
                 }
-                
-                data["chat"]["contents"].forEach(element => {
+
+                data["contents"].forEach(element => {
                     let p = document.createElement("li")
+                    let div = document.createElement("div")
+                    let br = document.createElement("br")
+
                     p.innerHTML = element["text"]
-                
-                    board.appendChild(p)
+
+                    if (element["sender"].toString() == "{{current_user.id}}" ) {
+                        p.className = "chat-message self"
+                    } else {
+                        p.className = "chat-message other"
+                    }
+
+                    div.appendChild(p)
+                    div.appendChild(br)
+                    board.appendChild(div)
                 });
             } catch (error) {
                 console.warn(error);
-                
+
                 if (!header.contains(warning_msg)) {
                     header.appendChild(warning_msg)
                 }
             }
         }
 
-        setInterval(update, 3000)
-
+        setInterval(update, 4000)
+        update()
     </script>
 {% endblock %}
