@@ -1,0 +1,9 @@
+.chat-message.other {
+    position: absolute;
+    left: 30px;;
+}
+
+.chat-message.self {
+    position: absolute;
+    right: 30px;;
+}

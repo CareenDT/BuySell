@@ -6,18 +6,18 @@
         <div class="col-md-6 mx-auto">
             <div class="card">
                 <div class="card-header">
-                    <h4>Профиль пользователя</h4>
+                    <h4>User #{{user["id"]}} profile</h4>
                 </div>
                 <div class="card-body">
                     <h3>{{ user["username"] }}</h3>
                     <p><strong>Email:</strong> {{ user["email"] }}</p>
                     {% if user["about"] %}
-                        <p><strong>О себе:</strong> {{ user["about"] }}</p>
+                        <p><strong>About:</strong> {{ user["about"] }}</p>
                     {% endif %}
-                    <p><strong>На сайте с:</strong> {{ user["joined_date"] }}</p>
+                    <p><strong>Joined с:</strong> {{ user["joined_date"] }}</p>
                 </div>
                 <div class="card-footer">
-                    <a href="/product_list" class="btn btn-secondary">Назад</a>
+                    <a href="/product_list" class="btn btn-secondary">Back</a>
                 </div>
             </div>
         </div>
