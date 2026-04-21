@@ -29,6 +29,8 @@ app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+APP_NAME = "BuySellTemplate"
+
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
@@ -45,21 +47,21 @@ def logout():
 @app.route("/")
 def index():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("index.html", title="BuySellTemplate", products = response["products"])
+    return render_template("index.html", title="{APP_NAME}", products = response["products"])
 
 @app.route("/product_list")
 def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("products.html", title="BuySellTemplate > Products", products = response["products"])
+    return render_template("products.html", title="{APP_NAME} > Products", products = response["products"])
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
-    return render_template("view_product.html", title="Продукт", product=response["product"])
+    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"])
 
 @app.route("/profile")
 def profile():
-    return render_template("profile.html", title=f"Профиль: {current_user['username']}", user=current_user)
+    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user['username']})", user=current_user)
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
@@ -84,7 +86,7 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title="Put on sale", form=form)
+    return render_template("sell_product.html", title="{APP_NAME} > Sell", form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -111,7 +113,7 @@ def register():
 
         return redirect('/login')
     
-    return render_template('register.html', title='Register', form=form)
+    return render_template('register.html', title='{APP_NAME} > Register', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -127,7 +129,7 @@ def login():
         return render_template('login.html',
                                message="Invalid login information",
                                form=form)
-    return render_template('login.html', title='Авторизация', form=form)
+    return render_template('login.html', title = f"{APP_NAME} > Login", form=form)
 
 @app.route("/chat/<int:chat_id>")
 @login_required
@@ -140,7 +142,7 @@ def chat(chat_id):
         return first_response
     print(data)
     if current_user.id in [data["owner"], data["recipient"]]:
-        return render_template("chat.html", title = "BuySellTemplate > Chat", chat_id=chat_id, current_user=current_user)
+        return render_template("chat.html", title = f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
     else:
         abort(403)
 
