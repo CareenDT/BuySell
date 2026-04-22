@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 
+import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
@@ -69,7 +70,13 @@ def del_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
     product = response["product"]
     if product["owner"] != current_user.id:
-        pass
+        return make_response(jsonify({'error': 'bad request, you are not the owner of this product'}), 403)
+
+    response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}")
+
+    if response.status_code == 200:
+        return redirect("/product_list")
+    return jsonify({"Error while delete the product": response.status_code})
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
