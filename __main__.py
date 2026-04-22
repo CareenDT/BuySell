@@ -61,7 +61,15 @@ def view_product(product_id):
 
 @app.route("/profile")
 def profile():
-    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user['username']})", user=current_user)
+    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
+
+@app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
+@login_required
+def del_product(product_id):
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    product = response["product"]
+    if product["owner"] != current_user.id:
+        pass
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
