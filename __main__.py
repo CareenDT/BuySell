@@ -69,10 +69,12 @@ def profile():
 def del_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
     product = response["product"]
-    if product["owner"] != current_user.id:
-        return make_response(jsonify({'error': 'bad request, you are not the owner of this product'}), 403)
+    data = {
+        "owner": product["owner"],
+        "current_user_id": current_user.id
+    }
 
-    response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}")
+    response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}", json=data)
 
     if response.status_code == 200:
         return redirect("/product_list")
