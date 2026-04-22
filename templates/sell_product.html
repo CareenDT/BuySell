@@ -8,10 +8,10 @@
                 <form action="" method="post">
                     {{ form.hidden_tag() }}
                     <div class="card-header">
-                        <h2>Продажа товара</h2>
+                        <h2>Put on sale</h2>
                     </div>
                     <div class="card-body">
-                        <h6>Название</h6>
+                        <h6>Name</h6>
                         <p>
                             {{ form.name(class="form-control") }}<br>
                             {% for error in form.name.errors %}
@@ -20,7 +20,7 @@
                                 </p>
                             {% endfor %}
                         </p>
-                        <h6>Описание</h6>
+                        <h6>Description</h6>
                         <p>
                             {{ form.description(class="form-control") }}<br>
                             {% for error in form.description.errors %}
@@ -29,7 +29,7 @@
                                 </p>
                             {% endfor %}
                         </p>
-                        <h6>Цена</h6>
+                        <h6>Price</h6>
                         <p>
                             {{ form.price(class="form-control") }}<br>
                             {% for error in form.price.errors %}
@@ -41,7 +41,7 @@
                     </div>
                     <div class="card-footer">
                         <a>{{ form.submit(type="submit", class="btn btn-secondary") }}</a>
-                        <a href="/product_list" class="btn btn-secondary product-page-button cancel">Назад</a>
+                        <a href="/product_list" class="btn btn-secondary product-page-button cancel">Back</a>
                     </div>
                     {{ message }}
                 </form>
