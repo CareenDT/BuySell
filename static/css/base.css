@@ -25,3 +25,7 @@
 .product-page-button.cancel {
     position: absolute; right: 10px;
 }
+
+.product-page-button.delete {
+    position: absolute; right: 10px;
+}
