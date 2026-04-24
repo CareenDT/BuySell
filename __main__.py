@@ -47,12 +47,12 @@ def logout():
 @app.route("/")
 def index():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("index.html", title="{APP_NAME}", products = response["products"])
+    return render_template("index.html", title=f"{APP_NAME}", products = response["products"])
 
 @app.route("/product_list")
 def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("products.html", title="{APP_NAME} > Products", products = response["products"])
+    return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
@@ -86,7 +86,7 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title="{APP_NAME} > Sell", form=form)
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -113,7 +113,7 @@ def register():
 
         return redirect('/login')
     
-    return render_template('register.html', title='{APP_NAME} > Register', form=form)
+    return render_template('register.html', title=f'{APP_NAME} > Register', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
