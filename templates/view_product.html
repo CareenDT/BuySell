@@ -18,6 +18,9 @@
                 </div>
                 <div class="card-footer">
                     <a href="/product_list" class="btn btn-secondary">Back</a>
+                    {% if delete_allowed %}
+                        <a href="/del_product/{{product['id']}}" class="btn btn-secondary product-page-button delete">Delete</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

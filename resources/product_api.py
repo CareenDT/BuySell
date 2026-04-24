@@ -40,10 +40,22 @@ class ProductResource(Resource):
         session.commit()
 
     def delete(self, product_id):
-        abort_if_product_not_found(product_id)
+        if not flask.request.json:
+            return flask.make_response(flask.jsonify({'error': 'Empty request'}), 400)
+        elif not all(key in flask.request.json for key in ["owner", "current_user_id"]):
+            return flask.make_response(flask.jsonify({'error': 'Bad request'}), 400)
 
         session = db_session.create_session()
         product = session.get(Products, product_id)
+
+        data = {
+            'owner': flask.request.json.get("owner", 0),
+            'product_id': product.id,
+            'current_user_id': flask.request.json.get("current_user_id", None),
+        }
+
+        if data["owner"] != data["current_user_id"]:
+            return flask.make_response(flask.jsonify({'error': 'You are not the owner of this product'}), 403)
 
         session.delete(product)
         session.commit()

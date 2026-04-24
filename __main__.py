@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 
+import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
@@ -57,11 +58,30 @@ def products():
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
-    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"])
+    delete_allowed = False
+    if current_user.id == response["product"]["owner"]:
+        delete_allowed = True
+    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
 
 @app.route("/profile")
 def profile():
-    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user['username']})", user=current_user)
+    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
+
+@app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
+@login_required
+def del_product(product_id):
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    product = response["product"]
+    data = {
+        "owner": product["owner"],
+        "current_user_id": current_user.id
+    }
+
+    response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}", json=data)
+
+    if response.status_code == 200:
+        return redirect("/product_list")
+    return jsonify({"Error while delete the product": response.status_code})
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
