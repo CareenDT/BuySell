@@ -59,8 +59,11 @@ def products():
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
     delete_allowed = False
-    if current_user.id == response["product"]["owner"]:
-        delete_allowed = True
+    try:
+        if current_user.id == response["product"]["owner"]:
+            delete_allowed = True
+    except Exception as e:
+        pass
     return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
 
 @app.route("/profile")
@@ -80,7 +83,7 @@ def del_product(product_id):
     response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}", json=data)
 
     if response.status_code == 200:
-        return redirect("/product_list")
+        return redirect("/")
     return jsonify({"Error while delete the product": response.status_code})
 
 
@@ -101,7 +104,7 @@ def sell_product():
         response = post("http://127.0.0.1:8080/api/product", json=data)
 
         if response.status_code == 200:
-            return redirect("/product_list")
+            return redirect("/")
         else:
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
