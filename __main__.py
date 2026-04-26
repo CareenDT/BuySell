@@ -9,7 +9,7 @@ from flask_restful import Api
 from requests import get, post
 
 from data import db_session
-from data.__all_models import User, Products
+from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
 from resources.chat_api import ChatListResource, ChatResource
 from resources.product_api import ProductListResource, ProductResource
@@ -109,7 +109,38 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)\
+
+
+@app.route("/messages", methods=['GET'])
+@login_required
+def messages():
+    db_sess = db_session.create_session()
+
+    chats = db_sess.query(Chat).filter(
+        (Chat.owner == current_user.id) | (Chat.recipient == current_user.id)
+    ).all()
+
+    chat_list = []
+    for chat in chats:
+        if chat.owner == current_user.id:
+            other_id = chat.recipient
+        else:
+            other_id = chat.owner
+        other_user = db_sess.get(User, other_id)
+
+        last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
+
+        chat_list.append({
+            "chat_id": chat.id,
+            "other_username": other_user.username,
+            "last_message": last_message,
+            "created_date": chat.created_date
+        })
+
+    db_sess.close()
+
+    return render_template("messages.html", chats=chat_list)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -153,6 +184,33 @@ def login():
                                message="Invalid login information",
                                form=form)
     return render_template('login.html', title = f"{APP_NAME} > Login", form=form)
+
+@app.route("/start_chat/<int:owner_id>/<int:product_id>")
+@login_required
+def start_chat(owner_id, product_id):
+    if current_user.id == owner_id:
+        return redirect("/")
+
+    db_sess = db_session.create_session()
+
+    chat = db_sess.query(Chat).filter(
+        ((Chat.owner == current_user.id) & (Chat.recipient == owner_id)) |
+        ((Chat.owner == owner_id) & (Chat.recipient == current_user.id))
+    ).first()
+
+    if not chat:
+
+        chat = Chat(
+            owner=current_user.id,
+            recipient=owner_id
+        )
+        db_sess.add(chat)
+        db_sess.commit()
+
+    chat_id = chat.id
+    db_sess.close()
+
+    return redirect(f"/chat/{chat_id}")
 
 @app.route("/chat/<int:chat_id>")
 @login_required
