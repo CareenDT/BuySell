@@ -1,15 +1,30 @@
 {% extends "base.html" %}
 
+{% block at_head_end %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
 {% block content %}
-    <div class="list-group ">
-        {% for item in products[0:10] %}
-            <a href="/view_product/{{item["id"]}}" class="list-group-item list-group-item-action">
-                <h3>{{item["name"]}}</h3>
-                <p>{{item["description"]}}</p>
-                <p class="id-display">product id: {{item["id"]}}</p>
-            </a>
-        {% endfor %}
+    <div class="hero">
+        <h1>Welcome to BuySell</h1>
+        <p>Buy and sell items easily.</p>
+        <a href="/products">Browse Products</a>
     </div>
 
-    <a href="/product_list" class="btn btn-primary">More to see!</a>
+    <div class="products">
+        <h2>Featured Products</h2>
+        {% for item in products[0:10] %}
+            <a href="/view_product/{{ item['id'] }}" class="product-card">
+                <h3>{{ item['name'] }}</h3>
+                <p>{{ item['description'] or 'No description.' }}</p>
+                <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
+                <span class="id"> | ID: {{ item['id'] }}</span>
+            </a>
+        {% endfor %}
+
+        <div class="more">
+            <a href="/product_list">More to see!</a>
+        </div>
+    </div>
 {% endblock %}
+

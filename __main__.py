@@ -2,13 +2,14 @@ import datetime
 import logging
 import os
 
+import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
 
 from data import db_session
-from data.__all_models import User, Products
+from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
 from resources.chat_api import ChatListResource, ChatResource
 from resources.product_api import ProductListResource, ProductResource
@@ -29,6 +30,8 @@ app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+APP_NAME = "BuySellTemplate"
+
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
@@ -45,21 +48,43 @@ def logout():
 @app.route("/")
 def index():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("index.html", title="BuySellTemplate", products = response["products"])
+    return render_template("index.html", title=f"{APP_NAME}", products = response["products"])
 
 @app.route("/product_list")
 def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("products.html", title="BuySellTemplate > Products", products = response["products"])
+    return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
-    return render_template("view_product.html", title="Продукт", product=response["product"])
+    delete_allowed = False
+    try:
+        if current_user.id == response["product"]["owner"]:
+            delete_allowed = True
+    except Exception as e:
+        pass
+    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
 
 @app.route("/profile")
 def profile():
-    return render_template("profile.html", title=f"Профиль: {current_user['username']}", user=current_user)
+    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
+
+@app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
+@login_required
+def del_product(product_id):
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    product = response["product"]
+    data = {
+        "owner": product["owner"],
+        "current_user_id": current_user.id
+    }
+
+    response = requests.delete(f"http://127.0.0.1:8080/api/product/{product_id}", json=data)
+
+    if response.status_code == 200:
+        return redirect("/")
+    return jsonify({"Error while delete the product": response.status_code})
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
@@ -79,12 +104,43 @@ def sell_product():
         response = post("http://127.0.0.1:8080/api/product", json=data)
 
         if response.status_code == 200:
-            return redirect("/product_list")
+            return redirect("/")
         else:
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title="Put on sale", form=form)
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)\
+
+
+@app.route("/messages", methods=['GET'])
+@login_required
+def messages():
+    db_sess = db_session.create_session()
+
+    chats = db_sess.query(Chat).filter(
+        (Chat.owner == current_user.id) | (Chat.recipient == current_user.id)
+    ).all()
+
+    chat_list = []
+    for chat in chats:
+        if chat.owner == current_user.id:
+            other_id = chat.recipient
+        else:
+            other_id = chat.owner
+        other_user = db_sess.get(User, other_id)
+
+        last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
+
+        chat_list.append({
+            "chat_id": chat.id,
+            "other_username": other_user.username,
+            "last_message": last_message,
+            "created_date": chat.created_date
+        })
+
+    db_sess.close()
+
+    return render_template("messages.html", chats=chat_list)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -111,7 +167,7 @@ def register():
 
         return redirect('/login')
     
-    return render_template('register.html', title='Register', form=form)
+    return render_template('register.html', title=f'{APP_NAME} > Register', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -127,7 +183,34 @@ def login():
         return render_template('login.html',
                                message="Invalid login information",
                                form=form)
-    return render_template('login.html', title='Авторизация', form=form)
+    return render_template('login.html', title = f"{APP_NAME} > Login", form=form)
+
+@app.route("/start_chat/<int:owner_id>/<int:product_id>")
+@login_required
+def start_chat(owner_id, product_id):
+    if current_user.id == owner_id:
+        return redirect("/")
+
+    db_sess = db_session.create_session()
+
+    chat = db_sess.query(Chat).filter(
+        ((Chat.owner == current_user.id) & (Chat.recipient == owner_id)) |
+        ((Chat.owner == owner_id) & (Chat.recipient == current_user.id))
+    ).first()
+
+    if not chat:
+
+        chat = Chat(
+            owner=current_user.id,
+            recipient=owner_id
+        )
+        db_sess.add(chat)
+        db_sess.commit()
+
+    chat_id = chat.id
+    db_sess.close()
+
+    return redirect(f"/chat/{chat_id}")
 
 @app.route("/chat/<int:chat_id>")
 @login_required
@@ -140,7 +223,7 @@ def chat(chat_id):
         return first_response
     print(data)
     if current_user.id in [data["owner"], data["recipient"]]:
-        return render_template("chat.html", title = "BuySellTemplate > Chat", chat_id=chat_id, current_user=current_user)
+        return render_template("chat.html", title = f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
     else:
         abort(403)
 
