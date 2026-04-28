@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block at_head_end %}
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/chat_style.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/chat_style.css") }}">
 {% endblock %}
 
 {% block content %}
@@ -17,102 +17,108 @@
 </div>
 
 <script>
-    const board = document.getElementById("board")
-    const header = document.getElementById("header")
-    const msgInput = document.getElementById("msgInput")
-    const sendBtn = document.getElementById("sendBtn")
-    const warning_msg = document.createElement("div")
-    const currentUserId = "{{ current_user.id }}"
-    const chatId = "{{ chat_id }}"
+    const board = document.getElementById("board");
+    const header = document.getElementById("header");
+    const chatId = parseInt("{{ chat_id }}");
+    const currentUserId = parseInt("{{ current_user.id }}");
+    
+    const warning_msg = document.createElement("div");
+    warning_msg.className = "alert alert-danger";
+    warning_msg.role = "alert";
+    warning_msg.innerHTML = "There was a problem connecting to our server. Please standby.";
+    warning_msg.align = "center";
+    
+    const eventSource = new EventSource(`/chat/${chatId}/stream`);
+    
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (header.contains(warning_msg)) {
+            header.removeChild(warning_msg);
+        }
+        
+        let p = document.createElement("li");
+        let div = document.createElement("div");
+        let br = document.createElement("br");
+        
+        p.innerHTML = data["text"];
+        
+        if (data["sender"].toString() == currentUserId) {
+            p.className = "chat-message self";
+        } else {
+            p.className = "chat-message other";
+        }
+        
+        div.appendChild(p);
+        div.appendChild(br);
+        board.appendChild(div);
+        
+        div.scrollIntoView({ behavior: "smooth" });
+    };
+    
+    eventSource.onerror = (error) => {
+        console.warn("SSE error:", error);
+        
+        if (!header.contains(warning_msg)) {
+            header.appendChild(warning_msg);
+        }
+    };
 
-    warning_msg.className = "alert alert-danger"
-    warning_msg.role = "alert"
-    warning_msg.innerHTML = "Проблема с подключением к серверу. Пожалуйста, подождите."
-    warning_msg.align = "center"
-
-    function formatTime(isoString) {
-        if (!isoString) return ""
-        const date = new Date(isoString)
-        return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+    function sendMessage() {
+        const input = document.getElementById("msgInput");
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        fetch(`/chat/${chatId}/send`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                text: text,
+                sender: currentUserId
+            })
+        });
+        
+        input.value = "";
     }
-
-    function scrollToBottom() {
-        board.scrollTop = board.scrollHeight
-    }
-
-    async function update() {
+    
+    async function loadInitialMessages() {
+        if (header.contains(warning_msg)) {
+            header.removeChild(warning_msg);
+        }
         try {
-            const response = await fetch(`http://127.0.0.1:8080/api/chat/${chatId}`)
-            const data = await response.json()
-
-            board.replaceChildren()
-
-            if (header.contains(warning_msg)) {
-                header.removeChild(warning_msg)
-            }
-
+            const response = await fetch(`http://127.0.0.1:8080/chat/${chatId}`);
+            const data = await response.json();
+            
+            board.replaceChildren();
+            
             data["contents"].forEach(element => {
-                const wrapper = document.createElement("li")
-                wrapper.className = element["sender"].toString() === currentUserId ? "chat-message-wrapper self" : "chat-message-wrapper other"
-
-                const msg = document.createElement("div")
-                msg.className = element["sender"].toString() === currentUserId ? "chat-message self" : "chat-message other"
-                msg.innerHTML = `<span>${escapeHtml(element["text"])}</span><span class="msg-time">${formatTime(element["timestamp"])}</span>`
-
-                wrapper.appendChild(msg)
-                board.appendChild(wrapper)
-            })
-
-            scrollToBottom()
+                let p = document.createElement("li");
+                let div = document.createElement("div");
+                let br = document.createElement("br");
+                
+                p.innerHTML = element["text"];
+                
+                if (element["sender"].toString() == currentUserId) {
+                    p.className = "chat-message self";
+                } else {
+                    p.className = "chat-message other";
+                }
+                
+                div.appendChild(p);
+                div.appendChild(br);
+                board.appendChild(div);
+            });
         } catch (error) {
-            console.warn(error)
+            console.warn(error);
             if (!header.contains(warning_msg)) {
-                header.appendChild(warning_msg)
+                header.appendChild(warning_msg);
             }
         }
     }
-
-    async function sendMessage() {
-        const text = msgInput.value.trim()
-        if (!text) return
-
-        sendBtn.disabled = true
-
-        try {
-            const response = await fetch(`http://127.0.0.1:8080/api/chat/${chatId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: text, sender: currentUserId })
-            })
-
-            if (response.ok) {
-                msgInput.value = ""
-                await update()
-            } else {
-                alert("Ошибка отправки сообщения")
-            }
-        } catch (error) {
-            console.warn(error)
-            alert("Ошибка отправки сообщения")
-        } finally {
-            sendBtn.disabled = false
-            msgInput.focus()
-        }
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement("div")
-        div.textContent = text
-        return div.innerHTML
-    }
-
-    msgInput.addEventListener("keypress", function(event) {
-        if (event.key === "Enter") {
-            sendMessage()
-        }
-    })
-
-    setInterval(update, 4000)
-    update()
+    
+    loadInitialMessages();
 </script>
 {% endblock %}
