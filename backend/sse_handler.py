@@ -51,6 +51,7 @@ def chat_stream(chat_id):
     
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+@login_required
 @sse_bp.route('/chat/<int:chat_id>/send', methods=['POST'])
 def send_message(chat_id):
     user = current_user
@@ -60,7 +61,7 @@ def send_message(chat_id):
     session = db_session.create_session()
     chat = session.get(Chat, chat_id)
     
-    if str(user) not in [str(chat.owner), str(chat.recipient)]:
+    if str(user.id) not in [str(chat.owner), str(chat.recipient)]:
         session.close()
         return jsonify({'error': 'Access denied'}), 403
     

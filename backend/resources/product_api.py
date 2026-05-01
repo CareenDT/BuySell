@@ -26,9 +26,12 @@ class ProductResource(Resource):
 
         session = db_session.create_session()
         product = session.get(Products, product_id)
+        
+        result = jsonify({'product': product.to_dict(only=CODEC_MAP)})
 
-        return jsonify({'product': product.to_dict(
-            only=CODEC_MAP)})
+        session.close()
+
+        return result
     
     def update(self, product_id):
         abort_if_product_not_found(product_id)
@@ -38,6 +41,8 @@ class ProductResource(Resource):
 
         session.delete(product)
         session.commit()
+
+        session.close()
 
     def delete(self, product_id):
         if not flask.request.json:
@@ -59,6 +64,9 @@ class ProductResource(Resource):
 
         session.delete(product)
         session.commit()
+
+        session.close()
+
         return jsonify({'success': 'OK'})
     
 class ProductListResource(Resource):
@@ -66,11 +74,10 @@ class ProductListResource(Resource):
         session = db_session.create_session()
 
         products = session.query(Products).all()
-        return jsonify(
-            {
-                "products": [x.to_dict(only=CODEC_MAP) for x in products]
-            }
-        )
+
+        result = jsonify({"products": [x.to_dict(only=CODEC_MAP) for x in products]})
+        session.close()
+        return result
     
     def post(self):
         if not flask.request.json:
@@ -87,5 +94,10 @@ class ProductListResource(Resource):
             pricing = flask.request.json.get("pricing", 0)
         )
         session.add(product)
+
+        result = jsonify({'id': product.id})
+
         session.commit()
-        return jsonify({'id': product.id})
+        session.close()
+        
+        return result

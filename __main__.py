@@ -57,14 +57,17 @@ def products():
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
-    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}")
     delete_allowed = False
     try:
-        if current_user.id == response["product"]["owner"]:
+        if current_user.id == response.json()["product"]["owner"]:
             delete_allowed = True
     except Exception as e:
         pass
-    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
+
+    if response.status_code == 200:
+        return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response.json()["product"], delete_allowed=delete_allowed)
+    return abort(response.status_code)
 
 @app.route("/profile")
 @login_required
@@ -85,7 +88,7 @@ def del_product(product_id):
 
     if response.status_code == 200:
         return redirect("/")
-    return jsonify({"Error while delete the product": response.status_code})
+    return jsonify({"Error while deleting the product": response.status_code})
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
@@ -124,20 +127,23 @@ def messages():
 
     chat_list = []
     for chat in chats:
-        if chat.owner == current_user.id:
-            other_id = chat.recipient
-        else:
-            other_id = chat.owner
-        other_user = db_sess.get(User, other_id)
+        try:
+            if chat.owner == current_user.id:
+                other_id = chat.recipient
+            else:
+                other_id = chat.owner
+            other_user = db_sess.get(User, other_id)
 
-        last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
+            last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
 
-        chat_list.append({
-            "chat_id": chat.id,
-            "other_username": other_user.username,
-            "last_message": last_message,
-            "created_date": chat.created_date
-        })
+            chat_list.append({
+                "chat_id": chat.id,
+                "other_username": other_user.username,
+                "last_message": last_message,
+                "created_date": chat.created_date
+            })
+        except:
+            pass
 
     db_sess.close()
 
@@ -181,6 +187,7 @@ def login():
             login_user(user, remember=form.remember_me.data)
 
             return redirect("/")
+        db_sess.close()
         return render_template('login.html',
                                message="Invalid login information",
                                form=form)
