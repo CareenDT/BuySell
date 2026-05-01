@@ -13,9 +13,10 @@ class Products(SqlAlchemyBase, SerializerMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     owner = Column(Integer, ForeignKey("users.id"), nullable=True)
 
-    name = Column(String, nullable = False, default="Unnamed product")
-    description = Column(String, nullable = True, default="This product has no description")
-    pricing = Column(Float, nullable = False)
+    name = Column(String, nullable=False, default="Unnamed product")
+    description = Column(String, nullable=True, default="This product has no description")
+    pricing = Column(Float, nullable=False)
+    image = Column(String, nullable=True, default=None)
 
     created_date = Column(DateTime, default=datetime.datetime.now())
     modified_date = Column(DateTime, nullable=True)

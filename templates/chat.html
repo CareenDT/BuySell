@@ -1,67 +1,124 @@
 {% extends "base.html" %}
 
 {% block at_head_end %}
-<link rel="stylesheet"
-    type="text/css"
-    href="{{
-    url_for('static', filename='css/chat_style.css')
-    }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for("static", filename="css/chat_style.css") }}">
 {% endblock %}
 
 {% block content %}
+<div class="chat-wrapper">
+    <div class="chat-header">
+        <h3>Чат</h3>
+    </div>
+    <ul id="board" class="chat-board"></ul>
+    <div class="chat-input-bar">
+        <input type="text" id="msgInput" placeholder="Введите сообщение..." autocomplete="off">
+        <button id="sendBtn" onclick="sendMessage()">Отправить</button>
+    </div>
+</div>
+
+<script>
+    const board = document.getElementById("board");
+    const header = document.getElementById("header");
+    const chatId = parseInt("{{ chat_id }}");
+    const currentUserId = parseInt("{{ current_user.id }}");
+    
+    const warning_msg = document.createElement("div");
+    warning_msg.className = "alert alert-danger";
+    warning_msg.role = "alert";
+    warning_msg.innerHTML = "There was a problem connecting to our server. Please standby.";
+    warning_msg.align = "center";
+    
+    const eventSource = new EventSource(`/chat/${chatId}/stream`);
+    
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
         
-    <ul id="board" class="list-group">
+        if (header.contains(warning_msg)) {
+            header.removeChild(warning_msg);
+        }
         
-    </ul>
+        let p = document.createElement("li");
+        let div = document.createElement("div");
+        let br = document.createElement("br");
+        
+        p.innerHTML = data["text"];
+        
+        if (data["sender"].toString() == currentUserId) {
+            p.className = "chat-message self";
+        } else {
+            p.className = "chat-message other";
+        }
+        
+        div.appendChild(p);
+        div.appendChild(br);
+        board.appendChild(div);
+        
+        div.scrollIntoView({ behavior: "smooth" });
+    };
+    
+    eventSource.onerror = (error) => {
+        console.warn("SSE error:", error);
+        
+        if (!header.contains(warning_msg)) {
+            header.appendChild(warning_msg);
+        }
+    };
 
-    <script>
-        const board = document.getElementById("board")
-        const header = document.getElementById("header")
-        const warning_msg = document.createElement("div")
-
-        warning_msg.className = "alert alert-danger"
-        warning_msg.role = "alert"
-        warning_msg.innerHTML = "There was a problem connecting to our server. Please standby."
-        warning_msg.align = "center"
-
-        async function update() {
-            try {
-                const response = await fetch("http://127.0.0.1:8080/api/chat/{{ chat_id }}")
-                const data = await response.json()
-
-                board.replaceChildren()
-
-                if (header.contains(warning_msg)) {
-                    header.removeChild(warning_msg)
+    function sendMessage() {
+        const input = document.getElementById("msgInput");
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        fetch(`/chat/${chatId}/send`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                text: text,
+                sender: currentUserId
+            })
+        });
+        
+        input.value = "";
+    }
+    
+    async function loadInitialMessages() {
+        if (header.contains(warning_msg)) {
+            header.removeChild(warning_msg);
+        }
+        try {
+            const response = await fetch(`http://127.0.0.1:8080/chat/${chatId}`);
+            const data = await response.json();
+            
+            board.replaceChildren();
+            
+            data["contents"].forEach(element => {
+                let p = document.createElement("li");
+                let div = document.createElement("div");
+                let br = document.createElement("br");
+                
+                p.innerHTML = element["text"];
+                
+                if (element["sender"].toString() == currentUserId) {
+                    p.className = "chat-message self";
+                } else {
+                    p.className = "chat-message other";
                 }
-
-                data["contents"].forEach(element => {
-                    let p = document.createElement("li")
-                    let div = document.createElement("div")
-                    let br = document.createElement("br")
-
-                    p.innerHTML = element["text"]
-
-                    if (element["sender"].toString() == "{{current_user.id}}" ) {
-                        p.className = "chat-message self"
-                    } else {
-                        p.className = "chat-message other"
-                    }
-
-                    div.appendChild(p)
-                    div.appendChild(br)
-                    board.appendChild(div)
-                });
-            } catch (error) {
-                console.warn(error);
-
-                if (!header.contains(warning_msg)) {
-                    header.appendChild(warning_msg)
-                }
+                
+                div.appendChild(p);
+                div.appendChild(br);
+                board.appendChild(div);
+            });
+        } catch (error) {
+            console.warn(error);
+            if (!header.contains(warning_msg)) {
+                header.appendChild(warning_msg);
             }
         }
-
-        setInterval(update, 4000)
-        update()
-    </script>
+    }
+    
+    loadInitialMessages();
+</script>
 {% endblock %}

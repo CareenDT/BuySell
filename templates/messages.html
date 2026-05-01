@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Chats</h2>
+
+{% if chats %}
+    <ul>
+    {% for chat in chats %}
+        <li>
+            <a href="/chat/{{ chat.chat_id }}">
+                <h3>{{ chat.other_username }}</h3>
+                <h5>Last message: {{ chat.last_message }}</h5>
+                <h5>Created at: {{ chat.created_date.strftime('%d.%m.%Y') }}</h5>
+            </a>
+        </li>
+        <hr>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>You don't have any chats. Start a conversation with the seller!</p>
+    <a href="/">Check products</a>
+{% endif %}
+{% endblock %}

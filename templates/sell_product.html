@@ -5,7 +5,7 @@
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <form action="" method="post">
+                <form action="" method="post" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
                     <div class="card-header">
                         <h2>Put on sale</h2>
@@ -33,6 +33,15 @@
                         <p>
                             {{ form.price(class="form-control") }}<br>
                             {% for error in form.price.errors %}
+                                <p class="alert alert-danger" role="alert">
+                                    {{ error }}
+                                </p>
+                            {% endfor %}
+                        </p>
+                        <h6>Image</h6>
+                        <p>
+                            {{ form.image(class="form-control") }}<br>
+                            {% for error in form.image.errors %}
                                 <p class="alert alert-danger" role="alert">
                                     {{ error }}
                                 </p>
