@@ -29,3 +29,8 @@
 .product-page-button.delete {
     position: absolute; right: 10px;
 }
+
+.error-div {
+    text-align: center;
+    margin-top: 80px;
+}

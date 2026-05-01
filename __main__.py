@@ -59,6 +59,7 @@ def products():
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
     delete_allowed = False
+
     try:
         if current_user.id == response["product"]["owner"]:
             delete_allowed = True
@@ -110,7 +111,7 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)\
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
 
 
 @app.route("/messages", methods=['GET'])
