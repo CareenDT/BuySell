@@ -7,3 +7,7 @@ class ProductForm(FlaskForm):
     description = TextAreaField("Описание")
     price = FloatField("Цена", validators=[DataRequired(message="Введите цену"), NumberRange(min=0, message="цена должна быть больше 0")])
     submit = SubmitField("Добавить товар")
+
+class ProductSearchForm(FlaskForm):
+    search = StringField("Название товара")
+    submit = SubmitField("Искать")

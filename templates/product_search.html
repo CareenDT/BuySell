@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="">
+    <form action="" method="post" class="auth-form">
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.search.label }}<br>
+            {{ form.search(class="form-control") }}<br>
+            {% for error in form.search.errors %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endfor %}
+        </p>
+        <p>{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</p>
+    </form>
+</div>
+{% endblock %}

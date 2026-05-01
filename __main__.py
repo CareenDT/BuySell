@@ -12,7 +12,7 @@ from data import db_session
 from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
-from forms.product import ProductForm
+from forms.product import ProductForm, ProductSearchForm
 from backend.sse_handler import sse_bp
 
 # logging.basicConfig(
@@ -55,10 +55,21 @@ def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
 
+@app.route("/products")
+def product_search():
+    form = ProductSearchForm()
+    if form.validate_on_submit():
+        return redirect(f"/search/{form.search.data}")
+    return render_template("product_search.html", title=f"{APP_NAME} > Search Products", form=form)
+
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}")
     delete_allowed = False
+
+    if not response.get("product"):
+        abort(404)
+
     try:
         if current_user.id == response.json()["product"]["owner"]:
             delete_allowed = True
@@ -78,7 +89,12 @@ def profile():
 @login_required
 def del_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+
+    if not response.get("product"):
+        abort(404)
+
     product = response["product"]
+
     data = {
         "owner": product["owner"],
         "current_user_id": current_user.id
@@ -113,7 +129,7 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)\
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
 
 
 @app.route("/messages", methods=['GET'])
