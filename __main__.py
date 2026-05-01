@@ -65,19 +65,20 @@ def product_search():
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+    data = response.json()
     delete_allowed = False
 
-    if not response.get("product"):
+    if not data.get("product"):
         abort(404)
 
     try:
-        if current_user.id == response.json()["product"]["owner"]:
+        if current_user.id == data["product"]["owner"]:
             delete_allowed = True
     except Exception as e:
         pass
 
     if response.status_code == 200:
-        return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response.json()["product"], delete_allowed=delete_allowed)
+        return render_template("view_product.html", title=f"{APP_NAME} > Product", product=data["product"], delete_allowed=delete_allowed)
     return abort(response.status_code)
 
 @app.route("/profile")
