@@ -11,9 +11,9 @@ from requests import get, post
 from data import db_session
 from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
-from resources.chat_api import ChatListResource, ChatResource
-from resources.product_api import ProductListResource, ProductResource
+from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm
+from backend.sse_handler import sse_bp
 
 # logging.basicConfig(
 #     filename="RuntimeOutput.log",
@@ -67,6 +67,7 @@ def view_product(product_id):
     return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
 
 @app.route("/profile")
+@login_required
 def profile():
     return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
 
@@ -215,29 +216,39 @@ def start_chat(owner_id, product_id):
 @app.route("/chat/<int:chat_id>")
 @login_required
 def chat(chat_id):
-
-    first_response = get(f"http://127.0.0.1:8080/api/chat/{chat_id}")
-    data = first_response.json()
-
-    if first_response.status_code != 200:
-        return first_response
-    print(data)
-    if current_user.id in [data["owner"], data["recipient"]]:
-        return render_template("chat.html", title = f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
-    else:
+    db_sess = db_session.create_session()
+    chat = db_sess.get(Chat, chat_id)
+    db_sess.close()
+    
+    if not chat:
+        abort(404)
+    
+    if current_user.id not in [chat.owner, chat.recipient]:
         abort(403)
+    
+    return render_template("chat.html", title=f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
 
 @app.errorhandler(404)
 def not_found(error):
-    return make_response(jsonify({"error":"NotFound"}), 404)
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "NotFound"}), 404)
+    
+    return render_template("error.html", title="404", error_code=404, message="Page not found"), 404
+
 
 @app.errorhandler(400)
 def bad_request(error):
-    return make_response(jsonify({"error":"Bad Request"}), 400)
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "Bad Request"}), 400)
+    
+    return render_template("error.html", title="400", error_code=400, message="Bad Request"), 400
 
 @app.errorhandler(403)
-def bad_request(error):
-    return make_response(jsonify({"error":"Forbidden"}), 403)
+def forbidden(error):
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "forbidden"}), 403)
+    
+    return render_template("error.html", title="403", error_code=403, message="Forbidden"), 403
 
 def main():
     db_session.global_init("db/store.db")
@@ -245,8 +256,7 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    api.add_resource(ChatResource, "/api/chat/<int:chat_id>")
-    api.add_resource(ChatListResource, "/api/chat")
+    app.register_blueprint(sse_bp)
 
     app.run("127.0.0.1", 8080)
 
