@@ -1,12 +1,14 @@
 import datetime
 import logging
 import os
+import uuid
 
 import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
+from werkzeug.utils import secure_filename
 
 from data import db_session
 from data.__all_models import User, Products, Chat
@@ -15,27 +17,22 @@ from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
 from backend.sse_handler import sse_bp
 
-# logging.basicConfig(
-#     filename="RuntimeOutput.log",
-#     format='%(message)s',
-#     encoding="utf-8",
-# )
-
 app = Flask(__name__)
 api = Api(app)
 
 app.config["SECRET_KEY"] = os.urandom(16).hex()
 app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
+app.config["UPLOAD_FOLDER"] = os.path.join("static", "product", "images")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-APP_NAME = "BuySellTemplate"
+APP_NAME = "BuySell"
 
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
-
     return db_sess.get(User,user_id)
 
 @app.route('/logout')
@@ -108,18 +105,39 @@ def del_product(product_id):
     return jsonify({"Error while deleting the product": response.status_code})
 
 
+def save_image(file):
+    if not file or not file.filename:
+        return None
+    
+    upload_folder = app.config["UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    filename = secure_filename(file.filename)
+    ext = os.path.splitext(filename)[1]
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join(upload_folder, unique_filename)
+    
+    file.save(filepath)
+    
+    return os.path.join("static", "product", "images", unique_filename)
+
+
 @app.route("/sell_product", methods=['GET', 'POST'])
 @login_required
 def sell_product():
     form = ProductForm()
 
     if form.validate_on_submit():
+        image_path = None
+        if form.image.data:
+            image_path = save_image(form.image.data)
 
         data = {
             "owner": current_user.id,
             "name": form.name.data,
             "description": form.description.data,
-            "pricing": form.price.data
+            "pricing": form.price.data,
+            "image": image_path
         }
 
         response = post("http://127.0.0.1:8080/api/product", json=data)

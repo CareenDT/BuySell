@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 db/store.db
+static/images/product/*.png
 
 # C extensions
 *.so
