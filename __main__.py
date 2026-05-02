@@ -1,41 +1,38 @@
 import datetime
 import logging
 import os
+import uuid
 
 import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
+from werkzeug.utils import secure_filename
 
 from data import db_session
 from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
-from resources.chat_api import ChatListResource, ChatResource
-from resources.product_api import ProductListResource, ProductResource
-from forms.product import ProductForm
-
-# logging.basicConfig(
-#     filename="RuntimeOutput.log",
-#     format='%(message)s',
-#     encoding="utf-8",
-# )
+from backend.resources.product_api import ProductListResource, ProductResource
+from forms.product import ProductForm, ProductSearchForm
+from backend.sse_handler import sse_bp
 
 app = Flask(__name__)
 api = Api(app)
 
 app.config["SECRET_KEY"] = os.urandom(16).hex()
 app.config["PERMANENT_SESSION_LIFETIME"] = datetime.timedelta(days=365)
+app.config["UPLOAD_FOLDER"] = os.path.join("static", "product", "images")
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-APP_NAME = "BuySellTemplate"
+APP_NAME = "BuySell"
 
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
-
     return db_sess.get(User,user_id)
 
 @app.route('/logout')
@@ -55,18 +52,34 @@ def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
 
+@app.route("/products")
+def product_search():
+    form = ProductSearchForm()
+    if form.validate_on_submit():
+        return redirect(f"/search/{form.search.data}")
+    return render_template("product_search.html", title=f"{APP_NAME} > Search Products", form=form)
+
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
-    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+    data = response.json()
     delete_allowed = False
+
+    if not data.get("product"):
+        abort(404)
+
     try:
-        if current_user.id == response["product"]["owner"]:
+        if current_user.id == data["product"]["owner"]:
             delete_allowed = True
     except Exception as e:
         pass
-    return render_template("view_product.html", title=f"{APP_NAME} > Product", product=response["product"], delete_allowed=delete_allowed)
+
+    if response.status_code == 200:
+        return render_template("view_product.html", title=f"{APP_NAME} > Product", product=data["product"], delete_allowed=delete_allowed)
+    return abort(response.status_code)
 
 @app.route("/profile")
+@login_required
 def profile():
     return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
 
@@ -74,7 +87,12 @@ def profile():
 @login_required
 def del_product(product_id):
     response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}").json()
+
+    if not response.get("product"):
+        abort(404)
+
     product = response["product"]
+
     data = {
         "owner": product["owner"],
         "current_user_id": current_user.id
@@ -84,7 +102,24 @@ def del_product(product_id):
 
     if response.status_code == 200:
         return redirect("/")
-    return jsonify({"Error while delete the product": response.status_code})
+    return jsonify({"Error while deleting the product": response.status_code})
+
+
+def save_image(file):
+    if not file or not file.filename:
+        return None
+    
+    upload_folder = app.config["UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    filename = secure_filename(file.filename)
+    ext = os.path.splitext(filename)[1]
+    unique_filename = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join(upload_folder, unique_filename)
+    
+    file.save(filepath)
+    
+    return os.path.join("static", "product", "images", unique_filename)
 
 
 @app.route("/sell_product", methods=['GET', 'POST'])
@@ -93,12 +128,16 @@ def sell_product():
     form = ProductForm()
 
     if form.validate_on_submit():
+        image_path = None
+        if form.image.data:
+            image_path = save_image(form.image.data)
 
         data = {
             "owner": current_user.id,
             "name": form.name.data,
             "description": form.description.data,
-            "pricing": form.price.data
+            "pricing": form.price.data,
+            "image": image_path
         }
 
         response = post("http://127.0.0.1:8080/api/product", json=data)
@@ -109,7 +148,7 @@ def sell_product():
             return render_template("sell_product.html", title="Продать товар", form=form,
                                    message=f"Error while adding the product: {response.status_code}")
 
-    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)\
+    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
 
 
 @app.route("/messages", methods=['GET'])
@@ -123,20 +162,23 @@ def messages():
 
     chat_list = []
     for chat in chats:
-        if chat.owner == current_user.id:
-            other_id = chat.recipient
-        else:
-            other_id = chat.owner
-        other_user = db_sess.get(User, other_id)
+        try:
+            if chat.owner == current_user.id:
+                other_id = chat.recipient
+            else:
+                other_id = chat.owner
+            other_user = db_sess.get(User, other_id)
 
-        last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
+            last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
 
-        chat_list.append({
-            "chat_id": chat.id,
-            "other_username": other_user.username,
-            "last_message": last_message,
-            "created_date": chat.created_date
-        })
+            chat_list.append({
+                "chat_id": chat.id,
+                "other_username": other_user.username,
+                "last_message": last_message,
+                "created_date": chat.created_date
+            })
+        except:
+            pass
 
     db_sess.close()
 
@@ -180,6 +222,7 @@ def login():
             login_user(user, remember=form.remember_me.data)
 
             return redirect("/")
+        db_sess.close()
         return render_template('login.html',
                                message="Invalid login information",
                                form=form)
@@ -215,29 +258,39 @@ def start_chat(owner_id, product_id):
 @app.route("/chat/<int:chat_id>")
 @login_required
 def chat(chat_id):
-
-    first_response = get(f"http://127.0.0.1:8080/api/chat/{chat_id}")
-    data = first_response.json()
-
-    if first_response.status_code != 200:
-        return first_response
-    print(data)
-    if current_user.id in [data["owner"], data["recipient"]]:
-        return render_template("chat.html", title = f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
-    else:
+    db_sess = db_session.create_session()
+    chat = db_sess.get(Chat, chat_id)
+    db_sess.close()
+    
+    if not chat:
+        abort(404)
+    
+    if current_user.id not in [chat.owner, chat.recipient]:
         abort(403)
+    
+    return render_template("chat.html", title=f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
 
 @app.errorhandler(404)
 def not_found(error):
-    return make_response(jsonify({"error":"NotFound"}), 404)
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "NotFound"}), 404)
+    
+    return render_template("error.html", title="404", error_code=404, message="Page not found"), 404
+
 
 @app.errorhandler(400)
 def bad_request(error):
-    return make_response(jsonify({"error":"Bad Request"}), 400)
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "Bad Request"}), 400)
+    
+    return render_template("error.html", title="400", error_code=400, message="Bad Request"), 400
 
 @app.errorhandler(403)
-def bad_request(error):
-    return make_response(jsonify({"error":"Forbidden"}), 403)
+def forbidden(error):
+    if request.path.startswith('/api/'):
+        return make_response(jsonify({"error": "forbidden"}), 403)
+    
+    return render_template("error.html", title="403", error_code=403, message="Forbidden"), 403
 
 def main():
     db_session.global_init("db/store.db")
@@ -245,8 +298,7 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    api.add_resource(ChatResource, "/api/chat/<int:chat_id>")
-    api.add_resource(ChatListResource, "/api/chat")
+    app.register_blueprint(sse_bp)
 
     app.run("127.0.0.1", 8080)
 
