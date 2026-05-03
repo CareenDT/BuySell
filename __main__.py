@@ -52,12 +52,24 @@ def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
 
-@app.route("/products")
+@app.route("/products", methods=["GET", "POST"])
 def product_search():
     form = ProductSearchForm()
     if form.validate_on_submit():
         return redirect(f"/search/{form.search.data}")
     return render_template("product_search.html", title=f"{APP_NAME} > Search Products", form=form)
+
+
+@app.route("/search/<search>")
+def search(search):
+    response: dict = get(f"http://127.0.0.1:8080/api/product").json()
+
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.name.ilike(f"%{search}%")).all()
+    
+    return render_template("after_search_page.html", title=f"{APP_NAME}", products=products)
+
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
