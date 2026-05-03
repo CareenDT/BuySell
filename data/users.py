@@ -22,7 +22,7 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     modified_date = Column(DateTime, default=datetime.datetime.now())
 
     def __repr__(self):
-        return f"{self.login}: {self.created_at}"
+        return f"{self.username}: {self.joined_date}"
     
     def set_password(self, password):
         self.hashed_password = generate_password_hash(password)

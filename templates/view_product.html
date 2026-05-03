@@ -9,6 +9,9 @@
                     <h2>{{ product["name"] }}</h2>
                 </div>
                 <div class="card-body">
+                    {% if product["image"] %}
+                        <img src="\{{ product["image"] }}" alt="{{ product["name"] }}" style="max-width: 100%; height: auto; margin-bottom: 20px;">
+                    {% endif %}
                     <h4>Description</h4>
                     <p>{{ product["description"] }}</p>
                     <h4>Price</h4>
