@@ -5,7 +5,7 @@ body {
 .chat-wrapper {
     max-width: 800px;
     margin: 20px auto;
-    padding: 0 15px;
+    padding: 0 20px;
     height: calc(100vh - 100px);
     display: flex;
     flex-direction: column;
@@ -13,8 +13,8 @@ body {
 
 .chat-header {
     background-color: #e6dcc9;
-    padding: 15px 20px;
-    border-radius: 12px 12px 0 0;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
     border: 1px solid #d9cdb8;
     border-bottom: none;
     text-align: center;
@@ -70,12 +70,12 @@ body {
 .chat-message {
     max-width: 70%;
     padding: 12px 16px;
-    border-radius: 16px;
-    font-size: 15px;
+    border-radius: 8px;
+    font-size: 14px;
     line-height: 1.4;
     word-wrap: break-word;
     position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .chat-message.other {
@@ -92,7 +92,7 @@ body {
 }
 
 .chat-message .msg-time {
-    font-size: 11px;
+    font-size: 12px;
     opacity: 0.7;
     margin-top: 6px;
     display: block;
@@ -109,20 +109,20 @@ body {
     padding: 15px 20px;
     background-color: white;
     border: 1px solid #d9cdb8;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 8px 8px;
     border-top: 1px solid #e6dcc9;
 }
 
 .chat-input-bar input {
     flex: 1;
     border: 1px solid #d9cdb8;
-    border-radius: 24px;
-    padding: 10px 18px;
+    border-radius: 8px;
+    padding: 10px 16px;
     background-color: #faf8f3;
     color: #5c4d3c;
-    font-size: 15px;
+    font-size: 14px;
     outline: none;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .chat-input-bar input:focus {
@@ -135,12 +135,12 @@ body {
     background-color: #c2a67e;
     color: white;
     border: none;
-    border-radius: 24px;
-    padding: 10px 24px;
-    font-size: 15px;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s ease;
 }
 
 .chat-input-bar button:hover {
@@ -158,4 +158,3 @@ body {
     padding: 10px;
     font-size: 14px;
 }
-
