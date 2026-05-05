@@ -1,27 +1,27 @@
 body {
-    background-color: #f5f0e8;
+    background-color: #0d0b14;
 }
 
 .chat-wrapper {
-    max-width: 800px;
+    max-width: 980px;
     margin: 20px auto;
-    padding: 0 15px;
+    padding: 0 20px;
     height: calc(100vh - 100px);
     display: flex;
     flex-direction: column;
 }
 
 .chat-header {
-    background-color: #e6dcc9;
-    padding: 15px 20px;
-    border-radius: 12px 12px 0 0;
-    border: 1px solid #d9cdb8;
+    background-color: #1d1530;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #2f2448;
     border-bottom: none;
     text-align: center;
 }
 
 .chat-header h3 {
-    color: #5c4d3c;
+    color: #f2ecff;
     margin: 0;
     font-size: 18px;
     font-weight: 600;
@@ -29,9 +29,9 @@ body {
 
 .chat-board {
     flex: 1;
-    background-color: #faf8f3;
-    border-left: 1px solid #d9cdb8;
-    border-right: 1px solid #d9cdb8;
+    background-color: #130f1f;
+    border-left: 1px solid #2f2448;
+    border-right: 1px solid #2f2448;
     overflow-y: auto;
     padding: 20px;
     list-style: none;
@@ -46,11 +46,11 @@ body {
 }
 
 .chat-board::-webkit-scrollbar-track {
-    background: #f0ebe3;
+    background: #130f1f;
 }
 
 .chat-board::-webkit-scrollbar-thumb {
-    background: #d9cdb8;
+    background: #40305f;
     border-radius: 4px;
 }
 
@@ -70,29 +70,29 @@ body {
 .chat-message {
     max-width: 70%;
     padding: 12px 16px;
-    border-radius: 16px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14px;
     line-height: 1.4;
     word-wrap: break-word;
     position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .chat-message.other {
-    background-color: white;
-    color: #5c4d3c;
-    border: 1px solid #d9cdb8;
+    background-color: #1f1830;
+    color: #ece7ff;
+    border: 1px solid #2f2448;
     border-bottom-left-radius: 4px;
 }
 
 .chat-message.self {
-    background-color: #c2a67e;
+    background-color: #8b5cf6;
     color: white;
     border-bottom-right-radius: 4px;
 }
 
 .chat-message .msg-time {
-    font-size: 11px;
+    font-size: 12px;
     opacity: 0.7;
     margin-top: 6px;
     display: block;
@@ -100,62 +100,61 @@ body {
 }
 
 .chat-message.other .msg-time {
-    color: #7a6b5a;
+    color: #b8add1;
 }
 
 .chat-input-bar {
     display: flex;
     gap: 10px;
     padding: 15px 20px;
-    background-color: white;
-    border: 1px solid #d9cdb8;
-    border-radius: 0 0 12px 12px;
-    border-top: 1px solid #e6dcc9;
+    background-color: #171124;
+    border: 1px solid #2f2448;
+    border-radius: 0 0 8px 8px;
+    border-top: 1px solid #2f2448;
 }
 
 .chat-input-bar input {
     flex: 1;
-    border: 1px solid #d9cdb8;
-    border-radius: 24px;
-    padding: 10px 18px;
-    background-color: #faf8f3;
-    color: #5c4d3c;
-    font-size: 15px;
+    border: 1px solid #2f2448;
+    border-radius: 8px;
+    padding: 10px 16px;
+    background-color: #130f1f;
+    color: #ece7ff;
+    font-size: 14px;
     outline: none;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .chat-input-bar input:focus {
-    border-color: #c2a67e;
-    box-shadow: 0 0 0 3px rgba(194, 166, 126, 0.2);
-    background-color: white;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    background-color: #171124;
 }
 
 .chat-input-bar button {
-    background-color: #c2a67e;
+    background-color: #8b5cf6;
     color: white;
     border: none;
-    border-radius: 24px;
-    padding: 10px 24px;
-    font-size: 15px;
+    border-radius: 4px;
+    padding: 10px 20px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s ease;
 }
 
 .chat-input-bar button:hover {
-    background-color: #a67c52;
+    background-color: #7648df;
 }
 
 .chat-input-bar button:disabled {
-    background-color: #d9cdb8;
+    background-color: #49366f;
     cursor: not-allowed;
 }
 
 .loading-dots {
     text-align: center;
-    color: #7a6b5a;
+    color: #b8add1;
     padding: 10px;
     font-size: 14px;
 }
-

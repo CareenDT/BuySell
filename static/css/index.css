@@ -1,25 +1,27 @@
 body {
-    background-color: #f5f0e8;
+    background-color: #0d0b14;
 }
 
 .hero {
-    background-color: #e6dcc9;
+    background-color: #171124;
+    border: 1px solid #2f2448;
+    border-radius: 10px;
     padding: 20px;
     text-align: center;
     margin-bottom: 20px;
 }
 
 .hero h1 {
-    color: #5c4d3c;
+    color: #f2ecff;
     font-size: 28px;
 }
 
 .hero p {
-    color: #7a6b5a;
+    color: #c7bbdf;
 }
 
 .hero a {
-    background-color: #c2a67e;
+    background-color: #8b5cf6;
     color: white;
     padding: 8px 16px;
     text-decoration: none;
@@ -31,43 +33,43 @@ body {
 }
 
 .products h2 {
-    color: #5c4d3c;
+    color: #f2ecff;
     font-size: 20px;
 }
 
 .product-card {
-    background-color: white;
-    border: 1px solid #d9cdb8;
+    background-color: #171124;
+    border: 1px solid #2f2448;
     border-radius: 8px;
     padding: 15px;
     margin-bottom: 15px;
     display: block;
     text-decoration: none;
-    color: #333;
+    color: #ece7ff;
 }
 
 .product-card:hover {
-    background-color: #faf8f3;
+    background-color: #211833;
 }
 
 .product-card h3 {
-    color: #5c4d3c;
+    color: #f2ecff;
     font-size: 18px;
     margin-top: 0;
 }
 
 .product-card p {
-    color: #7a6b5a;
+    color: #c7bbdf;
     font-size: 14px;
 }
 
 .price {
-    color: #a67c52;
+    color: #b794ff;
     font-weight: bold;
 }
 
 .id {
-    color: #999;
+    color: #9389af;
     font-size: 12px;
 }
 
@@ -77,7 +79,7 @@ body {
 }
 
 .more a {
-    background-color: #c2a67e;
+    background-color: #8b5cf6;
     color: white;
     padding: 8px 20px;
     text-decoration: none;
