@@ -16,6 +16,7 @@ from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
 from backend.sse_handler import sse_bp
+from forms.sort import SortForm
 
 app = Flask(__name__)
 api = Api(app)
@@ -41,11 +42,22 @@ def logout():
     logout_user()
     return redirect("/")
 
-@app.route("/index")
-@app.route("/")
+@app.route("/index", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def index():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("index.html", title=f"{APP_NAME}", products = response["products"])
+    form = SortForm()
+    products = response["products"]
+    if form.validate_on_submit():
+        choice = form.sort_type.data
+        if choice == 'price_asc':
+            products.sort(key=lambda p: p["pricing"], reverse=False)
+        elif choice == 'price_desc':
+            products.sort(key=lambda p: p["pricing"], reverse=True)
+        elif choice == 'newest':
+            products.sort(key=lambda p: p["created_date"], reverse=True)
+    print(products)
+    return render_template("index.html", title=f"{APP_NAME}", products=products, form=form)
 
 @app.route("/product_list")
 def products():
@@ -67,7 +79,7 @@ def search(search):
     db_sess = db_session.create_session()
 
     products = db_sess.query(Products).filter(Products.name.ilike(f"%{search}%")).all()
-    
+
     return render_template("after_search_page.html", title=f"{APP_NAME}", products=products)
 
 
