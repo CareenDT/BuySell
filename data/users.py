@@ -1,7 +1,7 @@
 import datetime
 
 from flask_login import UserMixin
-from sqlalchemy import Boolean, DateTime, ForeignKey, orm, Column, String, Integer
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, orm, Column, String, Integer
 from sqlalchemy_serializer import SerializerMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 from .db_session import SqlAlchemyBase
@@ -20,6 +20,8 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
 
     joined_date = Column(DateTime, default=datetime.datetime.now())
     modified_date = Column(DateTime, default=datetime.datetime.now())
+
+    cart_contents = Column(JSON, default=list)
 
     def __repr__(self):
         return f"{self.username}: {self.joined_date}"

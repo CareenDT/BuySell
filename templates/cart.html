@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="cart-wrapper">
+    <div class="cart-header">
+        <h3>My Cart</h3>
+    </div>
+    
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Product ID</th>
+                <th>Quantity</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="cart-body">
+            <tr id="empty-cart">
+                <td colspan="3">Cart is empty</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+let cart = [];
+const header = document.getElementById("header");
+const source = new EventSource('/cart/stream');
+
+function updateCartDisplay() {
+    const tbody = document.getElementById('cart-body');
+
+    if (cart.length == 0) {
+        tbody.innerHTML = `
+        <tr id="empty-cart">
+                <td colspan="3">Cart is empty</td>
+        </tr>
+        `
+        return;
+    }
+
+    tbody.innerHTML = cart.map(item => `
+        <tr>
+            <td>${item.product_id}</td>
+            <td>
+                <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity(${item.product_id}, this.value)" style="width: 80px;"></input>
+            </td>
+            <td><button onclick="removeFromCart(${item.product_id})" class="btn btn-sm btn-danger">Remove</button></td>
+        </tr>
+    `).join('');
+}
+
+async function updateQuantity(productId, quantity) {
+    await fetch('/cart/update', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({product_id: productId, quantity: parseInt(quantity)})
+    });
+}
+
+async function removeFromCart(productId) {
+    await fetch('/cart/remove', {
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({product_id: productId})
+    });
+}
+
+source.onmessage = function(event) {
+    
+    const data = JSON.parse(event.data).item;
+
+    if (data.type == "update") {
+        initialLoad()
+    }
+    else if (data.type == "remove") {
+        cart = cart.filter((val) => { return val.product_id != data.product_id})
+    }
+
+    updateCartDisplay()
+    
+};
+
+source.onerror = function(event) {
+    console.warn("SSE error:", event);
+};
+
+async function initialLoad() {
+    const response = await fetch("/cart/get_contents")
+
+    if (response.ok) {
+        let data = await response.json();
+        cart = data
+    } else {
+        console.error("Ошибка HTTP: " + response.status);
+    }
+    updateCartDisplay()
+}
+
+initialLoad()
+</script>
+{% endblock %}
