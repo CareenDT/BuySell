@@ -29,6 +29,20 @@
     warning_msg.align = "center";
     
     const eventSource = new EventSource(`/chat/${chatId}/stream`);
+
+    function appendMessage(text, senderId) {
+        const wrapper = document.createElement("div");
+        const msg = document.createElement("li");
+        const side = senderId.toString() === currentUserId.toString() ? "self" : "other";
+
+        wrapper.className = `chat-message-wrapper ${side}`;
+        msg.className = `chat-message ${side}`;
+        msg.textContent = text;
+
+        wrapper.appendChild(msg);
+        board.appendChild(wrapper);
+        wrapper.scrollIntoView({ behavior: "smooth" });
+    }
     
     eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -37,23 +51,7 @@
             header.removeChild(warning_msg);
         }
         
-        let p = document.createElement("li");
-        let div = document.createElement("div");
-        let br = document.createElement("br");
-        
-        p.innerHTML = data["text"];
-        
-        if (data["sender"].toString() == currentUserId) {
-            p.className = "chat-message self";
-        } else {
-            p.className = "chat-message other";
-        }
-        
-        div.appendChild(p);
-        div.appendChild(br);
-        board.appendChild(div);
-        
-        div.scrollIntoView({ behavior: "smooth" });
+        appendMessage(data["text"], data["sender"]);
     };
     
     eventSource.onerror = (error) => {
@@ -89,27 +87,13 @@
             header.removeChild(warning_msg);
         }
         try {
-            const response = await fetch(`http://127.0.0.1:8080/chat/${chatId}`);
+            const response = await fetch(`/chat/${chatId}`);
             const data = await response.json();
             
             board.replaceChildren();
             
             data["contents"].forEach(element => {
-                let p = document.createElement("li");
-                let div = document.createElement("div");
-                let br = document.createElement("br");
-                
-                p.innerHTML = element["text"];
-                
-                if (element["sender"].toString() == currentUserId) {
-                    p.className = "chat-message self";
-                } else {
-                    p.className = "chat-message other";
-                }
-                
-                div.appendChild(p);
-                div.appendChild(br);
-                board.appendChild(div);
+                appendMessage(element["text"], element["sender"]);
             });
         } catch (error) {
             console.warn(error);
