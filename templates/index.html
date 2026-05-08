@@ -11,6 +11,21 @@
         <a href="/products">Browse Products</a>
     </div>
 
+    <div class="">
+        <form action="" method="post" class="sort_form">
+            {{ form.hidden_tag() }}
+            <h4>{{ form.sort_type.label }}</h4>
+            {% for subfield in form.sort_type %}
+            <a>
+                {{ subfield() }} {{ subfield.label }}
+            </a>
+            {% endfor %}
+            <br>
+            <a>{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</a>
+        </form>
+        {{ message }}
+    </div>
+
     <div class="products">
         <h2>Featured Products</h2>
         {% for item in products[0:10] %}
