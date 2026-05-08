@@ -106,7 +106,16 @@ def view_product(product_id):
 @app.route("/profile")
 @login_required
 def profile():
-    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.owner == current_user.id).all()
+    products_len = len(products)
+
+    return render_template("profile.html",
+                           title=f"{APP_NAME} > Profile({current_user.username})",
+                           user=current_user,
+                           products=products,
+                           products_len=products_len)
 
 @app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
 @login_required
