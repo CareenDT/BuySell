@@ -1,15 +1,32 @@
-from flask import Blueprint, Response, abort, stream_with_context, request, jsonify
+from flask import Blueprint, Response, abort, render_template, stream_with_context, request, jsonify
 import json
 import datetime
 from data import db_session
 from data.chats import Chat
 from flask_login import current_user, login_required
 from sqlalchemy.orm.attributes import flag_modified
-from backend.ChatStreamManager import stream_manager
+from backend.stream_manager import StreamManager
 
-sse_bp = Blueprint('sse', __name__)
+stream_manager = StreamManager()
 
-@sse_bp.route('/chats', methods=['POST'])
+chatHandler_bp = Blueprint('chat_bp', __name__)
+
+@chatHandler_bp.route("/chat/<int:chat_id>")
+@login_required
+def chat(chat_id):
+    db_sess = db_session.create_session()
+    chat = db_sess.get(Chat, chat_id)
+    db_sess.close()
+    
+    if not chat:
+        abort(404)
+    
+    if current_user.id not in [chat.owner, chat.recipient]:
+        abort(403)
+    
+    return render_template("chat.html", title=f"Cart", chat_id=chat_id, current_user=current_user)
+
+@chatHandler_bp.route('/chats', methods=['POST'])
 @login_required
 def create_chat():
     data = request.get_json()
@@ -23,7 +40,7 @@ def create_chat():
     session.commit()
     return jsonify({'chat_id': chat.id})
 
-@sse_bp.route('/chat/<int:chat_id>/stream')
+@chatHandler_bp.route('/chat/<int:chat_id>/stream')
 @login_required
 def chat_stream(chat_id):
     user = current_user
@@ -52,7 +69,7 @@ def chat_stream(chat_id):
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @login_required
-@sse_bp.route('/chat/<int:chat_id>/send', methods=['POST'])
+@chatHandler_bp.route('/chat/<int:chat_id>/send', methods=['POST'])
 def send_message(chat_id):
     user = current_user
     if not user:

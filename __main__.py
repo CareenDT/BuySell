@@ -15,7 +15,8 @@ from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
-from backend.sse_handler import sse_bp
+from backend.chat_handler import chatHandler_bp
+from backend.cart_handler import cartHandler_bp
 
 app = Flask(__name__)
 api = Api(app)
@@ -267,21 +268,6 @@ def start_chat(owner_id, product_id):
 
     return redirect(f"/chat/{chat_id}")
 
-@app.route("/chat/<int:chat_id>")
-@login_required
-def chat(chat_id):
-    db_sess = db_session.create_session()
-    chat = db_sess.get(Chat, chat_id)
-    db_sess.close()
-    
-    if not chat:
-        abort(404)
-    
-    if current_user.id not in [chat.owner, chat.recipient]:
-        abort(403)
-    
-    return render_template("chat.html", title=f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
-
 @app.errorhandler(404)
 def not_found(error):
     if request.path.startswith('/api/'):
@@ -310,7 +296,8 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    app.register_blueprint(sse_bp)
+    app.register_blueprint(chatHandler_bp)
+    app.register_blueprint(cartHandler_bp)
 
     app.run("127.0.0.1", 8080)
 
