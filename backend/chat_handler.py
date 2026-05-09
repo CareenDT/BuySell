@@ -1,4 +1,13 @@
-from flask import Blueprint, Response, abort, render_template, stream_with_context, request, jsonify
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    jsonify,
+    render_template,
+    request,
+    session,
+    stream_with_context,
+)
 import json
 import datetime
 from data import db_session
@@ -6,6 +15,7 @@ from data.chats import Chat
 from flask_login import current_user, login_required
 from sqlalchemy.orm.attributes import flag_modified
 from backend.stream_manager import StreamManager
+from i18n import translate
 
 stream_manager = StreamManager()
 
@@ -24,7 +34,13 @@ def chat(chat_id):
     if current_user.id not in [chat.owner, chat.recipient]:
         abort(403)
     
-    return render_template("chat.html", title=f"Cart", chat_id=chat_id, current_user=current_user)
+    lang = session.get("lang", "ru")
+    return render_template(
+        "chat.html",
+        title=translate(lang, "chat.title_header"),
+        chat_id=chat_id,
+        current_user=current_user,
+    )
 
 @chatHandler_bp.route('/chats', methods=['POST'])
 @login_required

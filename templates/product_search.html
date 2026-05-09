@@ -1,19 +1,24 @@
 {% extends "base.html" %}
 
+{% block at_head_end %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="">
-    <form action="" method="post" class="search-form">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.search.label }}<br>
-            {{ form.search(class="form-control") }}<br>
-            {% for error in form.search.errors %}
-                <div class="alert alert-danger" role="alert">
-                    {{ error }}
-                </div>
-            {% endfor %}
-        </p>
-        <p>{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</p>
-    </form>
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="mb-4 text-center" style="font-size: 1.35rem;">{{ t('search.page_title') }}</h1>
+        <form action="" method="post" class="auth-form mb-0">
+            {{ form.hidden_tag() }}
+            <p>
+                {{ form.search.label }}<br>
+                {{ form.search(class="form-control", placeholder=t('search.placeholder')) }}
+                {% for error in form.search.errors %}
+                    <span class="alert alert-danger d-block mt-2" role="alert">{{ error }}</span>
+                {% endfor %}
+            </p>
+            <p class="mb-0">{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</p>
+        </form>
+    </div>
 </div>
 {% endblock %}
