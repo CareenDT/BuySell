@@ -6,25 +6,24 @@
 
 {% block content %}
     <div class="hero">
-        <h1>Welcome to BuySell</h1>
-        <p>Buy and sell items easily.</p>
-        <a href="/products">Browse Products</a>
+        <h1>{{ t('index.hero_title') }}</h1>
+        <p>{{ t('index.hero_text') }}</p>
+        <a href="/products">{{ t('index.browse') }}</a>
     </div>
 
     <div class="products">
-        <h2>Featured Products</h2>
+        <h2>{{ t('index.featured') }}</h2>
         {% for item in products[0:10] %}
             <a href="/view_product/{{ item['id'] }}" class="product-card">
                 <h3>{{ item['name'] }}</h3>
-                <p>{{ item['description'] or 'No description.' }}</p>
+                <p>{{ item['description'] or t('index.no_description') }}</p>
                 <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
                 <span class="id"> | ID: {{ item['id'] }}</span>
             </a>
         {% endfor %}
 
         <div class="more">
-            <a href="/product_list">More to see!</a>
+            <a href="/product_list">{{ t('index.more') }}</a>
         </div>
     </div>
 {% endblock %}
-

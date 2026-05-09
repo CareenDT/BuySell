@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
+{% block at_head_end %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
 {% block content %}
     <div class="list-group ">
         {% for item in products %}
             <a href="/view_product/{{item["id"]}}" class="list-group-item list-group-item-action">
                 <h3>{{item["name"]}}</h3>
-                <p>{{item["description"]}}</p>
+                <p>{{item["description"] or t('index.no_description') }}</p>
             </a>
         {% endfor %}
     </div>
