@@ -2,14 +2,16 @@
 
 {% block at_head_end %}
 <script>
+const confirmAddCartMsg = {{ t('product.confirm_cart') | tojson }};
 function addToCartFromProduct(productId) {
-    if (!confirm('Add this product to cart with quantity 1?')) return;
-    
+    if (!confirm(confirmAddCartMsg)) return;
     fetch('/cart/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: productId, quantity: 1 })
-    })
+    }).then(function (res) {
+        if (res.ok) location.reload();
+    });
 }
 </script>
 {% endblock %}
@@ -19,28 +21,37 @@ function addToCartFromProduct(productId) {
     <div class="row">
         <div class="col-md-8 mx-auto">
             <div class="card">
-                <div class="card-header">
-                    <h2>{{ product["name"] }}</h2>
+                <div class="card-header d-flex align-items-center flex-wrap gap-2">
+                    <h2 class="mb-0">{{ product["name"] }}</h2>
+                    {% if current_user.is_authenticated and not delete_allowed and in_cart %}
+                        <span class="badge-in-cart">{{ t('product.in_cart_badge') }}{% if cart_quantity %} (×{{ cart_quantity }}){% endif %}</span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     {% if product["image"] %}
-                        <img src="{{ product["image"] }}" alt="{{ product["name"] }}" style="max-width: 100%; height: auto; margin-bottom: 20px;">
+                        <img src="/{{ product["image"] }}" alt="{{ product["name"] }}" style="max-width: 100%; height: auto; margin-bottom: 20px;">
                     {% endif %}
-                    <h4>Description</h4>
+                    <h4>{{ t('product.desc') }}</h4>
                     <p>{{ product["description"] }}</p>
-                    <h4>Price</h4>
+                    <h4>{{ t('product.price') }}</h4>
                     <p>{{ product["pricing"] }} ₽</p>
-                    <h4>Created</h4>
+                    <h4>{{ t('product.created') }}</h4>
                     <p>{{ product["created_date"] }}</p>
                 </div>
-                <div class="card-footer">
-                    <a href="/" class="btn btn-secondary">Back</a>
+                <div class="card-footer position-relative">
+                    <a href="/" class="btn btn-secondary">{{ t('product.back') }}</a>
                     {% if delete_allowed %}
-                        <a href="/del_product/{{product['id']}}" class="btn btn-secondary product-page-button delete">Delete</a>
+                        <a href="/del_product/{{product['id']}}" class="btn btn-secondary product-page-button delete">{{ t('product.delete') }}</a>
                     {% endif %}
                     {% if not delete_allowed %}
-                        <a href="/start_chat/{{ product['owner'] }}/{{ product['id'] }}" class="btn btn-primary">Chat with seller</a>
-                        <button class="btn btn-success" onclick="addToCartFromProduct({{ product['id'] }})">Add to Cart</button>
+                        {% if current_user.is_authenticated %}
+                            <a href="/start_chat/{{ product['owner'] }}/{{ product['id'] }}" class="btn btn-primary">{{ t('product.chat') }}</a>
+                            <button type="button" class="btn btn-primary" onclick="addToCartFromProduct({{ product['id'] }})">{{ t('product.add_cart') }}</button>
+                        {% else %}
+                            <p class="text-muted small mb-2">{{ t('product.guest_hint') }}</p>
+                            <a href="{{ url_for('login', next=request.path) }}" class="btn btn-primary">{{ t('product.login') }}</a>
+                            <a href="{{ url_for('register') }}" class="btn btn-secondary">{{ t('product.register') }}</a>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

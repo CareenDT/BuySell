@@ -6,21 +6,37 @@
         <div class="col-md-6 mx-auto">
             <div class="card">
                 <div class="card-header">
-                    <h4>User #{{user["id"]}} profile</h4>
+                    <h4>{{ t('profile.user') }} {{ user["id"] }}</h4>
                 </div>
                 <div class="card-body">
                     <h3>{{ user["username"] }}</h3>
-                    <p><strong>Email:</strong> {{ user["email"] }}</p>
+                    <p><strong>{{ t('profile.email') }}:</strong> {{ user["email"] }}</p>
                     {% if user["about"] %}
-                        <p><strong>About:</strong> {{ user["about"] }}</p>
+                        <p><strong>{{ t('profile.about') }}:</strong> {{ user["about"] }}</p>
                     {% endif %}
-                    <p><strong>Joined с:</strong> {{ user["joined_date"] }}</p>
+                    <p><strong>{{ t('profile.joined') }}</strong> {{ user["joined_date"] }}</p>
                 </div>
                 <div class="card-footer">
-                    <a href="/product_list" class="btn btn-secondary">Back</a>
+                    <a href="/product_list" class="btn btn-secondary">{{ t('profile.back') }}</a>
                 </div>
             </div>
         </div>
     </div>
+
+    <a>
+        <h2>My products ({{ products_len }})</h2>
+        <ul>
+            {% for product in products %}
+                <li>
+                    <a href="/view_product/{{ product["id"] }}">
+                        <h3>{{ product["name"] }}</h3>
+                        <p>{{ product["description"] or "No description" }}</p>
+                        <h5>{{ product["pricing"] }} P</h5>
+                        <h5>Created: {{ product["created_date"] }}</h5>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </a>
 </div>
 {% endblock %}

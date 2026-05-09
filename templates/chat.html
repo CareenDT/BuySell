@@ -7,27 +7,28 @@
 {% block content %}
 <div class="chat-wrapper">
     <div class="chat-header">
-        <h3>Чат</h3>
+        <h3>{{ t('chat.title_header') }}</h3>
     </div>
     <ul id="board" class="chat-board"></ul>
     <div class="chat-input-bar">
-        <input type="text" id="msgInput" placeholder="Введите сообщение..." autocomplete="off">
-        <button id="sendBtn" onclick="sendMessage()">Отправить</button>
+        <input type="text" id="msgInput" placeholder="{{ t('chat.placeholder') }}" autocomplete="off">
+        <button type="button" id="sendBtn" onclick="sendMessage()">{{ t('chat.send') }}</button>
     </div>
 </div>
 
 <script>
+    const connectErrorText = {{ t('chat.connect_error') | tojson }};
     const board = document.getElementById("board");
     const header = document.getElementById("header");
     const chatId = parseInt("{{ chat_id }}");
     const currentUserId = parseInt("{{ current_user.id }}");
-    
+
     const warning_msg = document.createElement("div");
     warning_msg.className = "alert alert-danger";
     warning_msg.role = "alert";
-    warning_msg.innerHTML = "There was a problem connecting to our server. Please standby.";
-    warning_msg.align = "center";
-    
+    warning_msg.textContent = connectErrorText;
+    warning_msg.style.textAlign = "center";
+
     const eventSource = new EventSource(`/chat/${chatId}/stream`);
 
     function appendMessage(text, senderId) {
@@ -43,20 +44,26 @@
         board.appendChild(wrapper);
         wrapper.scrollIntoView({ behavior: "smooth" });
     }
-    
+
     eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
+        let data;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            return;
+        }
+        if (data.error || typeof data.text === "undefined") {
+            return;
+        }
+
         if (header.contains(warning_msg)) {
             header.removeChild(warning_msg);
         }
-        
+
         appendMessage(data["text"], data["sender"]);
     };
-    
-    eventSource.onerror = (error) => {
-        console.warn("SSE error:", error);
-        
+
+    eventSource.onerror = () => {
         if (!header.contains(warning_msg)) {
             header.appendChild(warning_msg);
         }
@@ -65,9 +72,9 @@
     function sendMessage() {
         const input = document.getElementById("msgInput");
         const text = input.value.trim();
-        
+
         if (!text) return;
-        
+
         fetch(`/chat/${chatId}/send`, {
             method: "POST",
             headers: {
@@ -78,31 +85,8 @@
                 sender: currentUserId
             })
         });
-        
+
         input.value = "";
     }
-    
-    async function loadInitialMessages() {
-        if (header.contains(warning_msg)) {
-            header.removeChild(warning_msg);
-        }
-        try {
-            const response = await fetch(`/chat/${chatId}`);
-            const data = await response.json();
-            
-            board.replaceChildren();
-            
-            data["contents"].forEach(element => {
-                appendMessage(element["text"], element["sender"]);
-            });
-        } catch (error) {
-            console.warn(error);
-            if (!header.contains(warning_msg)) {
-                header.appendChild(warning_msg);
-            }
-        }
-    }
-    
-    loadInitialMessages();
 </script>
 {% endblock %}
