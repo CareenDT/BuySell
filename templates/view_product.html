@@ -29,7 +29,7 @@ function addToCartFromProduct(productId) {
                 </div>
                 <div class="card-body">
                     {% if product["image"] %}
-                        <img src="{{ product["image"] }}" alt="{{ product["name"] }}" style="max-width: 100%; height: auto; margin-bottom: 20px;">
+                        <img src="/{{ product["image"] }}" alt="{{ product["name"] }}" style="max-width: 100%; height: auto; margin-bottom: 20px;">
                     {% endif %}
                     <h4>{{ t('product.desc') }}</h4>
                     <p>{{ product["description"] }}</p>
