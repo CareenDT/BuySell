@@ -247,11 +247,18 @@ def view_product(product_id):
 @login_required
 def profile():
     lc = session.get("lang", "ru")
-    return render_template(
-        "profile.html",
-        title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
-        user=current_user,
-    )
+
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.owner == current_user.id).all()
+    products_len = len(products)
+
+    return render_template("profile.html",
+                           title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
+                           user=current_user,
+                           products=products,
+                           products_len=products_len,
+                           )
 
 
 @app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
