@@ -1,44 +1,32 @@
 {% extends "base.html" %}
 
-{% block at_head_end %}
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
-{% endblock %}
-
 {% block content %}
-    <div class="hero">
-        <h1>{{ t('index.hero_title') }}</h1>
-        <p>{{ t('index.hero_text') }}</p>
-        <a href="/products">{{ t('index.browse') }}</a>
-    </div>
-
-    <div class="">
-        <form action="" method="post" class="sort_form">
-            {{ form.hidden_tag() }}
-            <h4>{{ form.sort_type.label }}</h4>
-            {% for subfield in form.sort_type %}
-            <a>
-                {{ subfield() }} {{ subfield.label }}
-            </a>
-            {% endfor %}
-            <br>
-            <a>{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</a>
-        </form>
-        {{ message }}
-    </div>
-
-    <div class="products">
-        <h2>{{ t('index.featured') }}</h2>
-        {% for item in products[0:10] %}
-            <a href="/view_product/{{ item['id'] }}" class="product-card">
-                <h3>{{ item['name'] }}</h3>
-                <p>{{ item['description'] or t('index.no_description') }}</p>
-                <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
-                <span class="id"> | ID: {{ item['id'] }}</span>
-            </a>
-        {% endfor %}
-
-        <div class="more">
-            <a href="/product_list">{{ t('index.more') }}</a>
+    <a href="{{ url_for('register') }}" class="btn btn-secondary">Регистрация</a>
+    <a href="{{ url_for('login', next=request.path) }}" class="btn btn-secondary">Вход</a>
+    <a href="{{ url_for('home_page') }}" class="btn btn-secondary">Главная страница</a>
+    <h1>Что предоставляет наш сайт:</h1>
+    <p></p>
+    <div class="carousel-container">
+        <div id="f_carsel" class="carousel slide">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src={{ pic_list[0] }} class="d-block w-100">
+                </div>
+                {% for i in range(pic_list|length) %}
+                {% if i > 0 %}
+                <div class="carousel-item">
+                    <img src={{ pic_list[i] }} class="d-block w-100">
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#f_carsel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#f_carsel" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}
