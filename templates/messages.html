@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Chats</h2>
+<h2>{{ t('messages.title') }}</h2>
 
 {% if chats %}
     <ul>
@@ -9,15 +9,15 @@
         <li>
             <a href="/chat/{{ chat.chat_id }}">
                 <h3>{{ chat.other_username }}</h3>
-                <h5>Last message: {{ chat.last_message }}</h5>
-                <h5>Created at: {{ chat.created_date.strftime('%d.%m.%Y') }}</h5>
+                <h5>{{ t('messages.last_message') }}: {% if chat.last_message %}{{ chat.last_message }}{% else %}{{ t('messages.no_last_message') }}{% endif %}</h5>
+                <h5>{{ t('messages.created') }}: {{ chat.created_date.strftime('%d.%m.%Y') }}</h5>
             </a>
         </li>
         <hr>
     {% endfor %}
     </ul>
 {% else %}
-    <p>You don't have any chats. Start a conversation with the seller!</p>
-    <a href="/">Check products</a>
+    <p>{{ t('messages.none') }}</p>
+    <a href="/" class="btn btn-secondary">{{ t('messages.to_products') }}</a>
 {% endif %}
 {% endblock %}

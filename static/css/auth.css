@@ -5,15 +5,15 @@
 }
 
 .auth-card {
-    background-color: white;
-    border: 1px solid #d9cdb8;
+    background-color: var(--surface-1);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 30px 24px;
-    box-shadow: 0 4px 12px rgba(92, 77, 60, 0.08);
+    box-shadow: var(--auth-shadow);
 }
 
 .auth-card h1 {
-    color: #5c4d3c;
+    color: var(--text-heading);
     font-size: 28px;
     text-align: center;
     margin: 0 0 22px;
@@ -30,7 +30,7 @@
 }
 
 .auth-form .btn-auth {
-    background-color: #c2a67e;
+    background-color: var(--accent);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -42,21 +42,33 @@
 }
 
 .auth-form .btn-auth:hover {
-    background-color: #a67c52;
+    background-color: var(--accent-hover);
 }
 
 .auth-link {
     text-align: center;
     margin-top: 20px;
-    color: #7a6b5a;
+    color: var(--text-soft);
 }
 
 .auth-link a {
-    color: #a67c52;
+    color: var(--link);
     text-decoration: none;
     font-weight: 500;
 }
 
 .auth-link a:hover {
     text-decoration: underline;
+}
+
+.settings-layout {
+    max-width: 520px;
+    margin: 2rem auto;
+    padding: 0 20px;
+}
+
+.settings-intro {
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
 }

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block at_head_end %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-layout auth-card">
+    <h1>{{ t('settings.title') }}</h1>
+    <p class="settings-intro">{{ t('settings.intro') }}</p>
+    <form method="post" class="auth-form">
+        <p>
+            <label for="pref_lang">{{ t('settings.language') }}</label>
+            <select class="form-select" id="pref_lang" name="lang">
+                <option value="ru" {% if ui_lang == 'ru' %}selected{% endif %}>Русский</option>
+                <option value="en" {% if ui_lang == 'en' %}selected{% endif %}>English</option>
+            </select>
+        </p>
+        <p>
+            <span class="d-block mb-2">{{ t('settings.theme') }}</span>
+            <label class="d-flex align-items-center gap-2 mb-1">
+                <input type="radio" name="theme" value="dark" {% if ui_theme == 'dark' %}checked{% endif %}>
+                {{ t('settings.theme_dark') }}
+            </label>
+            <label class="d-flex align-items-center gap-2">
+                <input type="radio" name="theme" value="light" {% if ui_theme == 'light' %}checked{% endif %}>
+                {{ t('settings.theme_light') }}
+            </label>
+        </p>
+        <p><button type="submit" class="btn btn-primary btn-auth">{{ t('settings.save') }}</button></p>
+    </form>
+</div>
+{% endblock %}

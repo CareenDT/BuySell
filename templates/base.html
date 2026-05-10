@@ -1,14 +1,10 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="{{ ui_lang }}" data-theme="{{ ui_theme }}" data-bs-theme="{{ ui_theme }}">
     <head>
         <meta charset="utf-8">
         <title>{{title}}</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-        <link rel="stylesheet"
-            type="text/css"
-            href="{{
-                url_for('static', filename='css/base.css')
-            }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/base.css') }}">
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 
         {% block at_head_end %} {% endblock %}
@@ -16,36 +12,65 @@
     <body>
         <header id="header">
             <nav class="navbar navbar-expand-lg navbar-light bg-light p-3">
-                <div class="container-fluid">
+                <div class="container-fluid" style="max-width: 1100px;">
 
                     <a class="navbar-brand" href="/">BuySell</a>
-                    
-                <div class="ms-auto">
-                    <ul class="navbar-nav">
-                        <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/products">Products</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/sell_product">Sell</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/messages">Messages</a></li>
-                        {% if current_user.is_authenticated %}
-                            <div class="dropdown">
-                                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{current_user.username}}
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                                    <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                                    <li><a class="dropdown-item" href="/settings">Settings</a></li>
-                                    <li><a class="dropdown-item" href="/logout">Logout</a></li>
-                                </ul>
-                            </div>
-                        {% else %}
-                            <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/register">Register</a></li>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navMain">
+                <div class="navbar-buysell-end ms-lg-auto" style="flex-wrap: nowrap;">
+                    <ul class="navbar-nav navbar-nav-main">
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/">{{ t('nav.home') }}</a></li>
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/products">{{ t('nav.search') }}</a></li>
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/product_list">{{ t('nav.products') }}</a></li>
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/sell_product">{{ t('nav.sell') }}</a></li>
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/messages">{{ t('nav.messages') }}</a></li>
+                        <li class="nav-item"><a class="nav-link nav-link-slot" href="/cart">{{ t('nav.cart') }}</a></li>
+                        {% if not current_user.is_authenticated %}
+                            <li class="nav-item"><a class="nav-link nav-link-slot" href="/login">{{ t('nav.login') }}</a></li>
+                            <li class="nav-item"><a class="nav-link nav-link-slot nav-link-slot-wide" href="/register">{{ t('nav.register') }}</a></li>
                         {% endif %}
                     </ul>
+                    <div class="navbar-tools">
+                        <div class="nav-prefs" role="group" aria-label="{{ t('nav.lang_switch') }}">
+                            <a href="{{ url_for('set_language', code='ru') }}" class="nav-pref-chip {{ 'active' if ui_lang == 'ru' else '' }}" title="{{ t('nav.lang_switch') }}">RU</a>
+                            <a href="{{ url_for('set_language', code='en') }}" class="nav-pref-chip {{ 'active' if ui_lang == 'en' else '' }}" title="{{ t('nav.lang_switch') }}">EN</a>
+                            <a href="{{ url_for('set_theme_route', name='dark') }}" class="nav-pref-chip {{ 'active' if ui_theme == 'dark' else '' }}" title="{{ t('nav.theme_dark') }}">◐</a>
+                            <a href="{{ url_for('set_theme_route', name='light') }}" class="nav-pref-chip {{ 'active' if ui_theme == 'light' else '' }}" title="{{ t('nav.theme_light') }}">◑</a>
+                        </div>
+                        {% if current_user.is_authenticated %}
+                            <a class="btn btn-navbar-settings" href="{{ url_for('settings_page') }}">{{ t('nav.settings') }}</a>
+                            <div class="dropdown navbar-user-dropdown">
+                                <button class="btn btn-secondary dropdown-toggle navbar-user-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ current_user.username }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+                                    <li><a class="dropdown-item" href="/profile">{{ t('nav.profile') }}</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('settings_page') }}">{{ t('nav.settings') }}</a></li>
+                                    <li><a class="dropdown-item" href="/logout">{{ t('nav.logout') }}</a></li>
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
                 </div>
             </nav>
-            
+
         </header>
+        <div class="site-flash-wrap px-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, msg in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mt-3 mb-0" role="alert">
+                            {{ msg }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('misc.close_alert') }}"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
         {% block content %} {% endblock %}
     </body>
 </html>

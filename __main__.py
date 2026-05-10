@@ -1,10 +1,20 @@
 import datetime
-import logging
 import os
 import uuid
 
 import requests
-from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    abort,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_restful import Api
 from requests import get, post
@@ -15,7 +25,10 @@ from data.__all_models import User, Products, Chat
 from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
-from backend.sse_handler import sse_bp
+from backend.chat_handler import chatHandler_bp
+from backend.cart_handler import cartHandler_bp
+from forms.sort import SortForm
+from i18n import normalize_lang, translate
 
 app = Flask(__name__)
 api = Api(app)
@@ -27,53 +40,178 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
 
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = "login"
+login_manager.login_message_category = "warning"
 
 APP_NAME = "BuySell"
+
+
+def localize_product_form(form, lang_code: str) -> None:
+    form.name.label.text = translate(lang_code, "sell.name")
+    form.description.label.text = translate(lang_code, "sell.desc")
+    form.price.label.text = translate(lang_code, "sell.price")
+    form.image.label.text = translate(lang_code, "sell.image")
+    form.submit.label.text = translate(lang_code, "sell.submit")
+
+
+def localize_product_search_form(form, lang_code: str) -> None:
+    form.search.label.text = translate(lang_code, "search.label")
+    form.submit.label.text = translate(lang_code, "search.submit")
+
+
+def localize_login_form(form, lang_code: str) -> None:
+    form.email.label.text = translate(lang_code, "login.email_field")
+    form.password.label.text = translate(lang_code, "login.password_field")
+    form.remember_me.label.text = translate(lang_code, "login.remember")
+    form.submit.label.text = translate(lang_code, "login.submit_btn")
+
+
+def localize_register_form(form, lang_code: str) -> None:
+    form.name.label.text = translate(lang_code, "register.name_field")
+    form.password.label.text = translate(lang_code, "register.password_field")
+    form.password_again.label.text = translate(
+        lang_code, "register.password_again_field"
+    )
+    form.email.label.text = translate(lang_code, "register.email_field")
+    form.about.label.text = translate(lang_code, "register.about_field")
+    form.submit.label.text = translate(lang_code, "register.submit_btn")
+
+
+@app.before_request
+def sync_ui_prefs():
+    session.setdefault("lang", "ru")
+    session.setdefault("theme", "dark")
+    session.permanent = True
+    login_manager.login_message = translate(session["lang"], "flash.login_required")
+
+
+@app.context_processor
+def inject_ui():
+    lang = session.get("lang", "ru")
+    theme = session.get("theme", "dark")
+    return {
+        "t": lambda key: translate(lang, key),
+        "ui_lang": lang,
+        "ui_theme": theme,
+    }
+
+
+@app.route("/set_language/<code>")
+def set_language(code):
+    session["lang"] = normalize_lang(code)
+    session.permanent = True
+    return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/set_theme/<name>")
+def set_theme_route(name):
+    session["theme"] = name if name in ("dark", "light") else "dark"
+    session.permanent = True
+    return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings_page():
+    lc = session.get("lang", "ru")
+    if request.method == "POST":
+        session["lang"] = normalize_lang(request.form.get("lang", lc))
+        th = request.form.get("theme", "dark")
+        session["theme"] = th if th in ("dark", "light") else "dark"
+        session.permanent = True
+        flash(translate(session["lang"], "settings.saved"), "success")
+        return redirect(url_for("settings_page"))
+    return render_template(
+        "settings.html",
+        title=f"{APP_NAME} > {translate(lc, 'settings.title')}",
+    )
+
 
 @login_manager.user_loader
 def load_user(user_id):
     db_sess = db_session.create_session()
-    return db_sess.get(User,user_id)
+    return db_sess.get(User, user_id)
 
-@app.route('/logout')
+
+@app.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect("/")
 
-@app.route("/index")
-@app.route("/")
+@app.route("/index", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "POST"])
 def index():
+    if current_user.is_authenticated:
+        return redirect("/home_page")
+    pic_list = [url_for('static', filename='index/images/1.jpg'),
+                           url_for('static', filename='index/images/2.jpg'),
+                           url_for('static', filename='index/images/3.jpg'),
+                           ]
+    return render_template(
+        "index.html",
+        title=f'{APP_NAME}', pic_list=pic_list,
+    )
+
+@app.route("/home_page", methods=["GET", "POST"])
+def home_page():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("index.html", title=f"{APP_NAME}", products = response["products"])
+    form = SortForm()
+    products = response["products"]
+    if form.validate_on_submit():
+        choice = form.sort_type.data
+        if choice == 'price_asc':
+            products.sort(key=lambda p: p["pricing"], reverse=False)
+        elif choice == 'price_desc':
+            products.sort(key=lambda p: p["pricing"], reverse=True)
+        elif choice == 'newest':
+            products.sort(key=lambda p: p["created_date"], reverse=True)
+    print(products)
+    return render_template("home_page.html", title=f"{APP_NAME} > home_page", products=products, form=form)
 
 @app.route("/product_list")
 def products():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
-    return render_template("products.html", title=f"{APP_NAME} > Products", products = response["products"])
+    lc = session.get("lang", "ru")
+    return render_template(
+        "products.html",
+        title=f'{APP_NAME} > {translate(lc, "nav.products")}',
+        products=response["products"],
+    )
+
 
 @app.route("/products", methods=["GET", "POST"])
 def product_search():
     form = ProductSearchForm()
+    localize_product_search_form(form, session.get("lang", "ru"))
     if form.validate_on_submit():
         return redirect(f"/search/{form.search.data}")
-    return render_template("product_search.html", title=f"{APP_NAME} > Search Products", form=form)
+    return render_template(
+        "product_search.html",
+        title=f'{APP_NAME} > {translate(session.get("lang", "ru"), "nav.search")}',
+        form=form,
+    )
 
 
 @app.route("/search/<search>")
 def search(search):
-    response: dict = get(f"http://127.0.0.1:8080/api/product").json()
+    get(f"http://127.0.0.1:8080/api/product").json()
 
     db_sess = db_session.create_session()
 
     products = db_sess.query(Products).filter(Products.name.ilike(f"%{search}%")).all()
-    
-    return render_template("after_search_page.html", title=f"{APP_NAME}", products=products)
+
+    lc = session.get("lang", "ru")
+    return render_template(
+        "after_search_page.html",
+        title=f'{APP_NAME} > {translate(lc, "after_search.results")}',
+        products=products,
+    )
 
 
 @app.route("/view_product/<int:product_id>")
 def view_product(product_id):
-    response: dict = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+    response = get(f"http://127.0.0.1:8080/api/product/{product_id}")
     data = response.json()
     delete_allowed = False
 
@@ -83,17 +221,58 @@ def view_product(product_id):
     try:
         if current_user.id == data["product"]["owner"]:
             delete_allowed = True
-    except Exception as e:
+    except Exception:
         pass
 
+    product = data["product"]
+    pid = product["id"]
+    in_cart = False
+    cart_quantity = 0
+    try:
+        if current_user.is_authenticated:
+            sess = db_session.create_session()
+            u = sess.get(User, current_user.id)
+            if u and u.cart_contents:
+                for row in u.cart_contents:
+                    if int(row.get("product_id", -1)) == int(pid):
+                        in_cart = True
+                        cart_quantity += int(row.get("quantity") or 0)
+            sess.close()
+    except Exception:
+        pass
+
+    if cart_quantity <= 0 and in_cart:
+        cart_quantity = 1
+
     if response.status_code == 200:
-        return render_template("view_product.html", title=f"{APP_NAME} > Product", product=data["product"], delete_allowed=delete_allowed)
+        return render_template(
+            "view_product.html",
+            title=f'{product.get("name", APP_NAME)} — {APP_NAME}',
+            product=product,
+            delete_allowed=delete_allowed,
+            in_cart=in_cart,
+            cart_quantity=cart_quantity,
+        )
     return abort(response.status_code)
+
 
 @app.route("/profile")
 @login_required
 def profile():
-    return render_template("profile.html", title=f"{APP_NAME} > Profile({current_user.username})", user=current_user)
+    lc = session.get("lang", "ru")
+
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.owner == current_user.id).all()
+    products_len = len(products)
+
+    return render_template("profile.html",
+                           title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
+                           user=current_user,
+                           products=products,
+                           products_len=products_len,
+                           )
+
 
 @app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
 @login_required
@@ -120,24 +299,26 @@ def del_product(product_id):
 def save_image(file):
     if not file or not file.filename:
         return None
-    
+
     upload_folder = app.config["UPLOAD_FOLDER"]
     os.makedirs(upload_folder, exist_ok=True)
-    
+
     filename = secure_filename(file.filename)
     ext = os.path.splitext(filename)[1]
     unique_filename = f"{uuid.uuid4()}{ext}"
     filepath = os.path.join(upload_folder, unique_filename)
-    
+
     file.save(filepath)
-    
+
     return os.path.join("static", "product", "images", unique_filename)
 
 
-@app.route("/sell_product", methods=['GET', 'POST'])
+@app.route("/sell_product", methods=["GET", "POST"])
 @login_required
 def sell_product():
+    lc = session.get("lang", "ru")
     form = ProductForm()
+    localize_product_form(form, lc)
 
     if form.validate_on_submit():
         image_path = None
@@ -157,13 +338,22 @@ def sell_product():
         if response.status_code == 200:
             return redirect("/")
         else:
-            return render_template("sell_product.html", title="Продать товар", form=form,
-                                   message=f"Error while adding the product: {response.status_code}")
+            msg = f"{translate(lc, 'sell.error_add')} {response.status_code}"
+            return render_template(
+                "sell_product.html",
+                title=f"{APP_NAME} > {translate(lc, 'nav.sell')}",
+                form=form,
+                message=msg,
+            )
 
-    return render_template("sell_product.html", title=f"{APP_NAME} > Sell", form=form)
+    return render_template(
+        "sell_product.html",
+        title=f"{APP_NAME} > {translate(lc, 'nav.sell')}",
+        form=form,
+    )
 
 
-@app.route("/messages", methods=['GET'])
+@app.route("/messages", methods=["GET"])
 @login_required
 def messages():
     db_sess = db_session.create_session()
@@ -181,7 +371,7 @@ def messages():
                 other_id = chat.owner
             other_user = db_sess.get(User, other_id)
 
-            last_message = chat.contents[-1]["text"] if chat.contents else "Нет сообщений"
+            last_message = chat.contents[-1]["text"] if chat.contents else None
 
             chat_list.append({
                 "chat_id": chat.id,
@@ -189,44 +379,64 @@ def messages():
                 "last_message": last_message,
                 "created_date": chat.created_date
             })
-        except:
+        except Exception:
             pass
 
     db_sess.close()
 
-    return render_template("messages.html", chats=chat_list)
+    lc = session.get("lang", "ru")
+    return render_template(
+        "messages.html",
+        chats=chat_list,
+        title=f'{APP_NAME} > {translate(lc, "messages.title")}',
+    )
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    lc = session.get("lang", "ru")
     form = RegisterForm()
+    localize_register_form(form, lc)
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
-            return render_template('register.html', title='Register',
-                                   form=form,
-                                   message="Passwords do not match")
+            return render_template(
+                "register.html",
+                title=f'{APP_NAME} > {translate(lc, "register.title")}',
+                form=form,
+                message=translate(lc, "register.msg_mismatch"),
+            )
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.email == form.email.data).first():
-            return render_template('register.html', title='Register',
-                                   form=form,
-                                   message="Username is not available")
+            return render_template(
+                "register.html",
+                title=f'{APP_NAME} > {translate(lc, "register.title")}',
+                form=form,
+                message=translate(lc, "register.msg_busy"),
+            )
         user = User(
             username=form.name.data,
             email=form.email.data,
-            about=form.about.data
+            about=form.about.data,
+            cart_contents=[],
         )
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
 
         return redirect('/login')
-    
-    return render_template('register.html', title=f'{APP_NAME} > Register', form=form)
+
+    return render_template(
+        "register.html",
+        title=f'{APP_NAME} > {translate(lc, "register.title")}',
+        form=form,
+    )
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-
+    lc = session.get("lang", "ru")
     form = LoginForm()
+    localize_login_form(form, lc)
     if form.validate_on_submit():
         db_sess = db_session.create_session()
         user = db_sess.query(User).filter(User.email == form.email.data).first()
@@ -235,10 +445,18 @@ def login():
 
             return redirect("/")
         db_sess.close()
-        return render_template('login.html',
-                               message="Invalid login information",
-                               form=form)
-    return render_template('login.html', title = f"{APP_NAME} > Login", form=form)
+        return render_template(
+            "login.html",
+            message=translate(lc, "login.invalid"),
+            form=form,
+            title=f'{APP_NAME} > {translate(lc, "login.title")}',
+        )
+    return render_template(
+        "login.html",
+        title=f'{APP_NAME} > {translate(lc, "login.title")}',
+        form=form,
+    )
+
 
 @app.route("/start_chat/<int:owner_id>/<int:product_id>")
 @login_required
@@ -267,42 +485,36 @@ def start_chat(owner_id, product_id):
 
     return redirect(f"/chat/{chat_id}")
 
-@app.route("/chat/<int:chat_id>")
-@login_required
-def chat(chat_id):
-    db_sess = db_session.create_session()
-    chat = db_sess.get(Chat, chat_id)
-    db_sess.close()
-    
-    if not chat:
-        abort(404)
-    
-    if current_user.id not in [chat.owner, chat.recipient]:
-        abort(403)
-    
-    return render_template("chat.html", title=f"{APP_NAME} > Chat", chat_id=chat_id, current_user=current_user)
 
 @app.errorhandler(404)
 def not_found(error):
     if request.path.startswith('/api/'):
         return make_response(jsonify({"error": "NotFound"}), 404)
-    
-    return render_template("error.html", title="404", error_code=404, message="Page not found"), 404
+
+    lc = session.get("lang", "ru")
+    msg = translate(lc, "error.page_not_found")
+    return render_template("error.html", title="404", error_code=404, message=msg), 404
 
 
 @app.errorhandler(400)
 def bad_request(error):
     if request.path.startswith('/api/'):
         return make_response(jsonify({"error": "Bad Request"}), 400)
-    
-    return render_template("error.html", title="400", error_code=400, message="Bad Request"), 400
+
+    lc = session.get("lang", "ru")
+    msg = translate(lc, "error.bad_request")
+    return render_template("error.html", title="400", error_code=400, message=msg), 400
+
 
 @app.errorhandler(403)
 def forbidden(error):
     if request.path.startswith('/api/'):
         return make_response(jsonify({"error": "forbidden"}), 403)
-    
-    return render_template("error.html", title="403", error_code=403, message="Forbidden"), 403
+
+    lc = session.get("lang", "ru")
+    msg = translate(lc, "error.forbidden")
+    return render_template("error.html", title="403", error_code=403, message=msg), 403
+
 
 def main():
     db_session.global_init("db/store.db")
@@ -310,7 +522,8 @@ def main():
     api.add_resource(ProductListResource, "/api/product")
     api.add_resource(ProductResource, "/api/product/<int:product_id>")
 
-    app.register_blueprint(sse_bp)
+    app.register_blueprint(chatHandler_bp)
+    app.register_blueprint(cartHandler_bp)
 
     app.run("127.0.0.1", 8080)
 
