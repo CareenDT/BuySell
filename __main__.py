@@ -143,6 +143,19 @@ def logout():
 @app.route("/index", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
 def index():
+    if current_user.is_authenticated:
+        return redirect("/home_page")
+    pic_list = [url_for('static', filename='index/images/1.jpg'),
+                           url_for('static', filename='index/images/2.jpg'),
+                           url_for('static', filename='index/images/3.jpg'),
+                           ]
+    return render_template(
+        "index.html",
+        title=f'{APP_NAME}', pic_list=pic_list,
+    )
+
+@app.route("/home_page", methods=["GET", "POST"])
+def home_page():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     form = SortForm()
     products = response["products"]
@@ -155,7 +168,7 @@ def index():
         elif choice == 'newest':
             products.sort(key=lambda p: p["created_date"], reverse=True)
     print(products)
-    return render_template("index.html", title=f"{APP_NAME}", products=products, form=form)
+    return render_template("home_page.html", title=f"{APP_NAME} > home_page", products=products, form=form)
 
 @app.route("/product_list")
 def products():
@@ -248,11 +261,18 @@ def view_product(product_id):
 @login_required
 def profile():
     lc = session.get("lang", "ru")
-    return render_template(
-        "profile.html",
-        title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
-        user=current_user,
-    )
+
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.owner == current_user.id).all()
+    products_len = len(products)
+
+    return render_template("profile.html",
+                           title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
+                           user=current_user,
+                           products=products,
+                           products_len=products_len,
+                           )
 
 
 @app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
