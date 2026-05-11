@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Balance</h3>
+
+  <div class="card mt-3">
+    <div class="card-body">
+      <h5 class="card-title">Balance Result</h5>
+
+      <div class="mb-2">
+        <span class="text-muted">Payment method:</span>
+        <strong>{{ payment_method }}</strong>
+      </div>
+
+      <div class="mb-2">
+        <span class="text-muted">Transaction ID:</span>
+        <strong>{{ transaction_id }}</strong>
+      </div>
+
+      <div class="mb-2">
+        <span class="text-muted">Amount:</span>
+        <strong>{{ paid_amount }}</strong>
+      </div>
+
+      {% if wallet_balance is not none %}
+      <div class="mb-2">
+        <span class="text-muted">Wallet balance (demo):</span>
+        <strong>{{ '%.2f'|format(wallet_balance) }}</strong>
+
+      </div>
+      {% endif %}
+
+
+      <hr />
+
+      {% if wallet_balance is not none and paid_amount is not none and wallet_balance is number and wallet_balance < paid_amount %}
+      <div class="alert alert-warning">
+        <strong>Insufficient funds</strong>. Your wallet balance is {{ wallet_balance }}.
+      </div>
+      {% else %}
+      <div class="alert alert-success">
+        <strong>Wallet charged</strong>: {{ balance_demo }}
+      </div>
+      {% endif %}
+
+
+
+
+      <div class="mt-3">
+        <a href="/add_funds" class="btn btn-secondary">Add funds</a>
+
+        <a href="/products" class="btn btn-primary ms-2">Continue shopping</a>
+        <a href="/cart" class="btn btn-outline-secondary ms-2">Back to Cart</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
