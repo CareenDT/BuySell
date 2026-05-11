@@ -1,26 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="cart-wrapper">
+<div class="cart-wrapper"
+     id="cartPage"
+     data-i18n-empty="{{ t('cart.empty') }}"
+     data-i18n-remove="{{ t('cart.remove') }}">
     <div class="cart-header">
-        <h3>My Cart</h3>
-    </div>
-    
-    <div class="cart-actions mt-3">
-        <a id="checkout-link" href="/checkout" class="btn btn-primary btn-sm">Checkout</a>
+        <h3>{{ t('cart.title') }}</h3>
     </div>
 
-    <table class="cart-table mt-3">
+    <table class="cart-table">
         <thead>
             <tr>
-                <th>Product</th>
-                <th>Quantity</th>
-                <th>Action</th>
+                <th>{{ t('cart.product_id') }}</th>
+                <th>{{ t('cart.quantity') }}</th>
+                <th>{{ t('cart.action') }}</th>
             </tr>
         </thead>
         <tbody id="cart-body">
             <tr id="empty-cart">
-                <td colspan="3">Cart is empty</td>
+                <td colspan="3">{{ t('cart.empty') }}</td>
             </tr>
         </tbody>
     </table>
@@ -29,6 +28,11 @@
 <script>
 let cart = [];
 const header = document.getElementById("header");
+const root = document.getElementById("cartPage");
+const i18n = {
+    empty: root.dataset.i18nEmpty,
+    remove: root.dataset.i18nRemove
+};
 const source = new EventSource('/cart/stream');
 
 function updateCartDisplay() {
@@ -37,9 +41,9 @@ function updateCartDisplay() {
     if (cart.length == 0) {
         tbody.innerHTML = `
         <tr id="empty-cart">
-                <td colspan="3">Cart is empty</td>
+                <td colspan="3">${i18n.empty}</td>
         </tr>
-        `
+        `;
         return;
     }
 
@@ -48,9 +52,9 @@ function updateCartDisplay() {
             <td>${item.name || item.product_id}</td>
 
             <td>
-                <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity(${item.product_id}, this.value)" style="width: 80px;"></input>
+                <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity(${item.product_id}, this.value)" style="width: 80px;">
             </td>
-            <td><button onclick="removeFromCart(${item.product_id})" class="btn btn-sm btn-danger">Remove</button></td>
+            <td><button type="button" onclick="removeFromCart(${item.product_id})" class="btn btn-sm btn-palette-outline">${i18n.remove}</button></td>
         </tr>
     `).join('');
 }
@@ -65,25 +69,31 @@ async function updateQuantity(productId, quantity) {
 
 async function removeFromCart(productId) {
     await fetch('/cart/remove', {
-        method: 'POST', 
+        method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({product_id: productId})
     });
 }
 
 source.onmessage = function(event) {
-    
-    const data = JSON.parse(event.data).item;
-
-    if (data.type == "update") {
-        initialLoad()
+    const payload = JSON.parse(event.data);
+    if (payload.type === "initial") {
+        cart = payload.cart || [];
+        updateCartDisplay();
+        return;
     }
-    else if (data.type == "remove") {
-        cart = cart.filter((val) => { return val.product_id != data.product_id})
+    const data = payload.item;
+    if (!data) return;
+
+    if (data.type === "update" || data.type === "add") {
+        initialLoad();
+        return;
+    }
+    if (data.type === "remove") {
+        cart = cart.filter((val) => val.product_id !== data.product_id);
     }
 
-    updateCartDisplay()
-    
+    updateCartDisplay();
 };
 
 source.onerror = function(event) {
@@ -91,17 +101,17 @@ source.onerror = function(event) {
 };
 
 async function initialLoad() {
-    const response = await fetch("/cart/get_contents")
+    const response = await fetch("/cart/get_contents");
 
     if (response.ok) {
         let data = await response.json();
-        cart = data
+        cart = data;
     } else {
-        console.error("Ошибка HTTP: " + response.status);
+        console.error("HTTP: " + response.status);
     }
-    updateCartDisplay()
+    updateCartDisplay();
 }
 
-initialLoad()
+initialLoad();
 </script>
 {% endblock %}

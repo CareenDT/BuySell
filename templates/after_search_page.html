@@ -1,23 +1,22 @@
 {% extends "base.html" %}
 
 {% block at_head_end %}
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
 {% endblock %}
 
 {% block content %}
 
-    <a href="/" class="btn btn-secondary">Back</a>
+    <div class="products pt-3">
+        <div class="mb-3"><a href="/" class="btn btn-secondary">{{ t('after_search.back') }}</a></div>
 
-    <div class="products">
-        <h2>Аound products</h2>
+        <h2>{{ t('after_search.results') }}</h2>
         {% for item in products[0:] %}
             <a href="/view_product/{{ item['id'] }}" class="product-card">
                 <h3>{{ item['name'] }}</h3>
-                <p>{{ item['description'] or 'No description.' }}</p>
+                <p>{{ item['description'] or t('index.no_description') }}</p>
                 <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
                 <span class="id"> | ID: {{ item['id'] }}</span>
             </a>
         {% endfor %}
     </div>
 {% endblock %}
-
