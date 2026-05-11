@@ -49,7 +49,8 @@ function updateCartDisplay() {
 
     tbody.innerHTML = cart.map(item => `
         <tr>
-            <td>${item.product_id}</td>
+            <td>${item.name || item.product_id}</td>
+
             <td>
                 <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity(${item.product_id}, this.value)" style="width: 80px;">
             </td>

@@ -27,6 +27,7 @@ from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
 from backend.chat_handler import chatHandler_bp
 from backend.cart_handler import cartHandler_bp
+from decimal import Decimal
 from forms.sort import SortForm
 from i18n import normalize_lang, translate
 
@@ -142,6 +143,19 @@ def logout():
 @app.route("/index", methods=["GET", "POST"])
 @app.route("/", methods=["GET", "POST"])
 def index():
+    if current_user.is_authenticated:
+        return redirect("/home_page")
+    pic_list = [url_for('static', filename='index/images/1.jpg'),
+                           url_for('static', filename='index/images/2.jpg'),
+                           url_for('static', filename='index/images/3.jpg'),
+                           ]
+    return render_template(
+        "index.html",
+        title=f'{APP_NAME}', pic_list=pic_list,
+    )
+
+@app.route("/home_page", methods=["GET", "POST"])
+def home_page():
     response: dict = get(f"http://127.0.0.1:8080/api/product").json()
     form = SortForm()
     products = response["products"]
@@ -154,7 +168,7 @@ def index():
         elif choice == 'newest':
             products.sort(key=lambda p: p["created_date"], reverse=True)
     print(products)
-    return render_template("index.html", title=f"{APP_NAME}", products=products, form=form)
+    return render_template("home_page.html", title=f"{APP_NAME} > home_page", products=products, form=form)
 
 @app.route("/product_list")
 def products():
@@ -247,11 +261,18 @@ def view_product(product_id):
 @login_required
 def profile():
     lc = session.get("lang", "ru")
-    return render_template(
-        "profile.html",
-        title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
-        user=current_user,
-    )
+
+    db_sess = db_session.create_session()
+
+    products = db_sess.query(Products).filter(Products.owner == current_user.id).all()
+    products_len = len(products)
+
+    return render_template("profile.html",
+                           title=f'{APP_NAME} > {translate(lc, "nav.profile")} ({current_user.username})',
+                           user=current_user,
+                           products=products,
+                           products_len=products_len,
+                           )
 
 
 @app.route("/del_product/<int:product_id>", methods=["GET", "POST"])
@@ -435,6 +456,227 @@ def login():
         "login.html",
         title=f'{APP_NAME} > {translate(lc, "login.title")}',
         form=form,
+    )
+
+
+@app.route("/checkout")
+@login_required
+def checkout():
+
+    cart = []
+    try:
+        cart = current_user.cart_contents or []
+    except Exception:
+        cart = []
+
+    cart_items = []
+    subtotal = Decimal("0.00")
+
+    for item in cart:
+        try:
+            product_id = int(item.get("product_id"))
+            quantity = int(item.get("quantity", 0))
+        except Exception:
+            continue
+
+        if quantity <= 0:
+            continue
+
+        product_response = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+        if product_response.status_code != 200:
+            continue
+
+        product_data = product_response.json().get("product")
+        if not product_data:
+            continue
+
+        pricing = product_data.get("pricing", 0) or 0
+
+        try:
+            pricing_dec = Decimal(str(pricing))
+        except Exception:
+            pricing_dec = Decimal("0.00")
+
+        line_total = pricing_dec * quantity
+        subtotal += line_total
+
+        cart_items.append({
+            "product_id": product_id,
+            "product_name": product_data.get("name"),
+            "quantity": quantity,
+            "pricing": pricing_dec,
+            "line_total": line_total,
+            "name": product_data.get("name")
+        })
+
+
+
+    return render_template(
+        "checkout.html",
+        title=f"{APP_NAME} > Checkout",
+        cart_items=cart_items,
+        subtotal=subtotal
+    )
+
+@app.route("/balance")
+@login_required
+def balance():
+    try:
+        db_sess = db_session.create_session()
+        user_obj = db_sess.get(User, current_user.id)
+        current_wallet = getattr(user_obj, "wallet_balance", None)
+        db_sess.close()
+    except Exception:
+        current_wallet = None
+
+    return render_template(
+        "balance.html",
+        title=f"{APP_NAME} > Balance",
+        payment_method="wallet",
+        transaction_id="-",
+        paid_amount=Decimal("0.00"),
+        balance_demo=Decimal("0.00"),
+        wallet_balance=current_wallet,
+    )
+
+
+@app.route("/add_funds")
+@login_required
+def add_funds():
+    return render_template("add_funds.html", title=f"{APP_NAME} > Add Funds")
+
+
+@app.route("/add_funds/confirm", methods=["POST"])
+@login_required
+def add_funds_confirm():
+    amount_raw = request.form.get("amount", "0")
+    try:
+        amount = Decimal(str(amount_raw))
+    except Exception:
+        amount = Decimal("0.00")
+
+    if amount <= 0:
+        return render_template(
+            "balance.html",
+            title=f"{APP_NAME} > Balance",
+            payment_method="wallet",
+            transaction_id="-",
+            paid_amount=Decimal("0.00"),
+            balance_demo=Decimal("0.00"),
+            wallet_balance=getattr(current_user, "wallet_balance", None),
+        )
+
+    transaction_id = str(uuid.uuid4())
+
+    try:
+        db_sess = db_session.create_session()
+        user_obj = db_sess.get(User, current_user.id)
+        current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
+        user_obj.wallet_balance = float(current_balance + amount)
+        db_sess.commit()
+        updated_balance = getattr(user_obj, "wallet_balance", None)
+        db_sess.close()
+    except Exception:
+        updated_balance = getattr(current_user, "wallet_balance", None)
+
+    return render_template(
+        "balance.html",
+        title=f"{APP_NAME} > Balance",
+        payment_method="wallet",
+
+        transaction_id=transaction_id,
+        paid_amount=amount,
+        balance_demo=amount,
+        wallet_balance=updated_balance,
+    )
+
+
+@app.route("/checkout/confirm", methods=["POST"])
+@login_required
+def checkout_confirm():
+    cart = current_user.cart_contents or []
+
+    subtotal = Decimal("0.00")
+    for item in cart:
+        try:
+            product_id = int(item.get("product_id"))
+            quantity = int(item.get("quantity", 0))
+        except Exception:
+            continue
+        if quantity <= 0:
+            continue
+
+        product_resp = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+        if product_resp.status_code != 200:
+            continue
+
+        product_data = product_resp.json().get("product")
+        if not product_data:
+            continue
+
+        pricing = product_data.get("pricing", 0) or 0
+        try:
+            pricing_dec = Decimal(str(pricing))
+        except Exception:
+            pricing_dec = Decimal("0.00")
+
+        subtotal += pricing_dec * quantity
+
+    payment_method = request.form.get("payment_method", "card")
+
+    transaction_id = str(uuid.uuid4())
+
+
+    if payment_method == "wallet":
+        try:
+            db_sess = db_session.create_session()
+            user_obj = db_sess.get(User, current_user.id)
+            current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
+            db_sess.close()
+        except Exception:
+            current_balance = Decimal("0.0")
+
+        if current_balance < subtotal:
+            return render_template(
+
+            "balance.html",
+            title=f"{APP_NAME} > Balance",
+            payment_method=payment_method,
+            transaction_id=transaction_id,
+            paid_amount=subtotal,
+            balance_demo=Decimal("0.0"),
+            wallet_balance=current_balance,
+        )
+
+
+
+    try:
+        db_sess = db_session.create_session()
+        user_obj = db_sess.get(User, current_user.id)
+
+        current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
+
+        new_balance = current_balance - subtotal
+        if new_balance < 0:
+            new_balance = Decimal("0.0")
+        user_obj.wallet_balance = float(new_balance)
+
+        user_obj.cart_contents = []
+        db_sess.commit()
+
+        updated_balance = getattr(user_obj, "wallet_balance", None)
+        db_sess.close()
+    except Exception:
+        updated_balance = None
+
+    return render_template(
+        "balance.html",
+        title=f"{APP_NAME} > Balance",
+        paid_amount=subtotal,
+        transaction_id=transaction_id,
+        payment_method=payment_method,
+        balance_demo=subtotal,
+        wallet_balance=updated_balance
     )
 
 

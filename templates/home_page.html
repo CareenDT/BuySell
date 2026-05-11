@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block at_head_end %}
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/index.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="hero">
+        <h1>{{ t('index.hero_title') }}</h1>
+        <p>{{ t('index.hero_text') }}</p>
+        <a href="/products">{{ t('index.browse') }}</a>
+    </div>
+
+    <div class="">
+        <form action="" method="post" class="sort_form">
+            {{ form.hidden_tag() }}
+            <h4>{{ form.sort_type.label }}</h4>
+            {% for subfield in form.sort_type %}
+            <a>
+                {{ subfield() }} {{ subfield.label }}
+            </a>
+            {% endfor %}
+            <br>
+            <a>{{ form.submit(type="submit", class="btn btn-primary btn-auth") }}</a>
+        </form>
+        {{ message }}
+    </div>
+
+    <div class="products">
+        <h2>{{ t('index.featured') }}</h2>
+        <div class="container">
+            <div class="row">
+                {% for item in products[0:10] %}
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <a href="/view_product/{{ item['id'] }}" class="product-tile">
+                            <div class="tile-content">
+                                <h3>{{ item['name'] }}</h3>
+                                <p>{{ item['description'] or t('index.no_description') }}</p>
+                                <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
+                                <span class="id"> | ID: {{ item['id'] }}</span>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="more">
+            <a href="/product_list">{{ t('index.more') }}</a>
+        </div>
+    </div>
+{% endblock %}
