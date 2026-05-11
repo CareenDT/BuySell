@@ -6,10 +6,14 @@
         <h3>My Cart</h3>
     </div>
     
-    <table class="cart-table">
+    <div class="cart-actions mt-3">
+        <a id="checkout-link" href="/checkout" class="btn btn-primary btn-sm">Checkout</a>
+    </div>
+
+    <table class="cart-table mt-3">
         <thead>
             <tr>
-                <th>Product ID</th>
+                <th>Product</th>
                 <th>Quantity</th>
                 <th>Action</th>
             </tr>
@@ -41,7 +45,8 @@ function updateCartDisplay() {
 
     tbody.innerHTML = cart.map(item => `
         <tr>
-            <td>${item.product_id}</td>
+            <td>${item.name || item.product_id}</td>
+
             <td>
                 <input type="number" value="${item.quantity}" min="1" onchange="updateQuantity(${item.product_id}, this.value)" style="width: 80px;"></input>
             </td>
