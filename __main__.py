@@ -21,7 +21,7 @@ from requests import get, post
 from werkzeug.utils import secure_filename
 
 from data import db_session
-from data.__all_models import User, Products, Chat
+from data.__all_models import User, Products, Chat, Order
 from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
@@ -518,6 +518,45 @@ def checkout():
         subtotal=subtotal
     )
 
+@app.route("/orders")
+@login_required
+def orders_page():
+    db_sess = db_session.create_session()
+    try:
+        raw_orders = db_sess.query(Order).filter(
+
+            (Order.buyer_id == current_user.id) | (Order.seller_id == current_user.id)
+        ).all()
+
+        lc_orders = []
+        for o in raw_orders:
+            try:
+                product_name = str(o.product_id)
+
+            except Exception:
+                product_name = str(o.product_id)
+
+            status_display = o.status
+            if o.seller_id == current_user.id and o.status == "pending":
+                status_display = "to_fulfill"
+
+            lc_orders.append(
+                {
+                    "id": o.id,
+                    "product_id": o.product_id,
+                    "product_name": product_name,
+                    "quantity": o.quantity,
+                    "amount": o.amount,
+                    "status_display": status_display,
+                    "transaction_id": o.transaction_id,
+                }
+            )
+    finally:
+        db_sess.close()
+
+    return render_template("orders.html", orders=lc_orders, title=f"{APP_NAME} > Orders")
+
+
 @app.route("/balance")
 @login_required
 def balance():
@@ -583,7 +622,6 @@ def add_funds_confirm():
         "balance.html",
         title=f"{APP_NAME} > Balance",
         payment_method="wallet",
-
         transaction_id=transaction_id,
         paid_amount=amount,
         balance_demo=amount,
@@ -650,34 +688,88 @@ def checkout_confirm():
 
 
 
-    try:
-        db_sess = db_session.create_session()
-        user_obj = db_sess.get(User, current_user.id)
+        try:
+            db_sess = db_session.create_session()
+            user_obj = db_sess.get(User, current_user.id)
 
-        current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
+            current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
 
-        new_balance = current_balance - subtotal
-        if new_balance < 0:
-            new_balance = Decimal("0.0")
-        user_obj.wallet_balance = float(new_balance)
+            new_balance = current_balance - subtotal
+            if new_balance < 0:
+                new_balance = Decimal("0.0")
+            user_obj.wallet_balance = float(new_balance)
+            cart_snapshot = list(current_user.cart_contents or [])
 
-        user_obj.cart_contents = []
-        db_sess.commit()
+            created_any = False
+            for item in cart_snapshot:
+                try:
+                    product_id = int(item.get("product_id"))
+                    quantity = int(item.get("quantity", 0))
+                except Exception:
+                    continue
 
-        updated_balance = getattr(user_obj, "wallet_balance", None)
-        db_sess.close()
-    except Exception:
-        updated_balance = None
+                if quantity <= 0:
+                    continue
 
-    return render_template(
-        "balance.html",
-        title=f"{APP_NAME} > Balance",
-        paid_amount=subtotal,
-        transaction_id=transaction_id,
-        payment_method=payment_method,
-        balance_demo=subtotal,
-        wallet_balance=updated_balance
-    )
+                product_resp = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+                if product_resp.status_code != 200:
+                    continue
+
+                product_data = product_resp.json().get("product")
+                if not product_data:
+                    continue
+
+                seller_id = product_data.get("owner")
+                if seller_id is None:
+                    continue
+
+                pricing = product_data.get("pricing", 0) or 0
+                try:
+                    pricing_dec = Decimal(str(pricing))
+                except Exception:
+                    pricing_dec = Decimal("0.00")
+
+                line_amount = float(pricing_dec * quantity)
+
+
+                order = Order(
+                    buyer_id=current_user.id,
+                    seller_id=int(seller_id),
+
+
+                    product_id=product_id,
+                    quantity=quantity,
+                    amount=line_amount,
+                    status="pending",
+
+                    transaction_id=transaction_id,
+                    payment_method=payment_method,
+                )
+                db_sess.add(order)
+                created_any = True
+
+
+            if created_any:
+
+                user_obj.cart_contents = []
+
+            db_sess.commit()
+
+
+            updated_balance = getattr(user_obj, "wallet_balance", None)
+            db_sess.close()
+        except Exception:
+            updated_balance = None
+
+        return render_template(
+            "balance.html",
+            title=f"{APP_NAME} > Balance",
+            paid_amount=subtotal,
+            transaction_id=transaction_id,
+            payment_method=payment_method,
+            balance_demo=subtotal,
+            wallet_balance=updated_balance
+        )
 
 
 @app.route("/start_chat/<int:owner_id>/<int:product_id>")
