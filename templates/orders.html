@@ -4,6 +4,7 @@
 <div class="container mt-4">
   <h3>Orders</h3>
 
+  <form method="POST" action="/orders/confirm">
   {% if orders and orders|length > 0 %}
     <div class="card mt-3">
       <div class="card-body">
@@ -26,6 +27,17 @@
                 <td>{{ o.status_display }}</td>
                 <td>{{ o.transaction_id or '-' }}</td>
               </tr>
+              <tr>
+                <td colspan="6">
+                  {% if o.status_display == 'pending' %}
+                    <button type="submit" name="order_id" value="{{ o.id }}" class="btn btn-success">Confirm</button>
+                  {% elif o.status_display == 'to_fulfill' %}
+                    <button type="submit" name="order_id" value="{{ o.id }}" class="btn btn-warning">Confirm</button>
+                  {% else %}
+                    <span class="text-muted">Fulfilled</span>
+                  {% endif %}
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
@@ -34,6 +46,7 @@
   {% else %}
     <div class="alert alert-warning mt-3">No orders yet.</div>
   {% endif %}
+  </form>
 </div>
 {% endblock %}
 
