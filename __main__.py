@@ -629,6 +629,46 @@ def add_funds_confirm():
     )
 
 
+@app.route("/orders/confirm", methods=["POST"])
+@login_required
+def order_confirm():
+    order_id_raw = request.form.get("order_id")
+    if not order_id_raw:
+        return redirect("/orders")
+
+    try:
+        order_id = int(order_id_raw)
+    except Exception:
+        return redirect("/orders")
+
+    db_sess = db_session.create_session()
+    try:
+        o = db_sess.get(Order, order_id)
+        if not o:
+            return redirect("/orders")
+
+        if o.buyer_id != current_user.id and o.seller_id != current_user.id:
+            return redirect("/orders")
+
+        is_buyer = o.buyer_id == current_user.id
+        is_seller = o.seller_id == current_user.id
+        if o.status == "pending":
+            if is_buyer:
+                o.status = "pending_buyer"
+            elif is_seller:
+                o.status = "to_fulfill"
+        elif o.status == "pending_buyer" and is_seller:
+            o.status = "fulfilled"
+        elif o.status == "to_fulfill" and is_buyer:
+            o.status = "fulfilled"
+
+        db_sess.commit()
+    finally:
+        db_sess.close()
+
+    return redirect("/orders")
+
+
 @app.route("/checkout/confirm", methods=["POST"])
 @login_required
 def checkout_confirm():
@@ -770,6 +810,8 @@ def checkout_confirm():
             balance_demo=subtotal,
             wallet_balance=updated_balance
         )
+    else:
+        return make_response(jsonify({"error": "unimplemented"}))
 
 
 @app.route("/start_chat/<int:owner_id>/<int:product_id>")
