@@ -5,21 +5,6 @@ from sqlalchemy.orm import Session
 SqlAlchemyBase = orm.declarative_base()
 __factory = None
 
-
-def _migrate_sqlite(engine: sa.Engine) -> None:
-    if engine.dialect.name != "sqlite":
-        return
-    with engine.begin() as conn:
-        rows = conn.execute(sa.text("PRAGMA table_info(users)")).fetchall()
-        cols = {row[1] for row in rows}
-        if "cart_contents" not in cols:
-            conn.execute(
-                sa.text(
-                    "ALTER TABLE users ADD COLUMN cart_contents TEXT DEFAULT '[]'"
-                )
-            )
-
-
 def global_init(db_file: str):
     global __factory
 
@@ -37,7 +22,6 @@ def global_init(db_file: str):
     from . import __all_models
 
     SqlAlchemyBase.metadata.create_all(engine)
-    _migrate_sqlite(engine)
 
 
 def create_session() -> Session:

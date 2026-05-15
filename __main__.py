@@ -6,7 +6,6 @@ import requests
 from flask import (
     Flask,
     abort,
-    flash,
     jsonify,
     make_response,
     redirect,
@@ -159,10 +158,14 @@ def logout():
 def index():
     if current_user.is_authenticated:
         return redirect("/home_page")
-    pic_list = [url_for('static', filename='index/images/1.jpg'),
-                           url_for('static', filename='index/images/2.jpg'),
-                           url_for('static', filename='index/images/3.jpg'),
-                           ]
+    pic_list = [url_for('static', filename='index/images/slide1.jpg'),
+                url_for('static', filename='index/images/slide2.jpg'),
+                url_for('static', filename='index/images/slide3.jpg'),
+                url_for('static', filename='index/images/slide4.jpg'),
+                url_for('static', filename='index/images/slide5.jpg'),
+                url_for('static', filename='index/images/slide6.jpg'),
+                url_for('static', filename='index/images/slide7.jpg'),
+                url_for('static', filename='index/images/slide8.jpg'),]
     return render_template(
         "index.html",
         title=f'{APP_NAME}', pic_list=pic_list,
