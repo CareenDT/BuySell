@@ -28,14 +28,22 @@
 
     <div class="products">
         <h2>{{ t('index.featured') }}</h2>
-        {% for item in products[0:10] %}
-            <a href="/view_product/{{ item['id'] }}" class="product-card">
-                <h3>{{ item['name'] }}</h3>
-                <p>{{ item['description'] or t('index.no_description') }}</p>
-                <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
-                <span class="id"> | ID: {{ item['id'] }}</span>
-            </a>
-        {% endfor %}
+        <div class="container">
+            <div class="row">
+                {% for item in products[0:10] %}
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <a href="/view_product/{{ item['id'] }}" class="product-tile">
+                            <div class="tile-content">
+                                <h3>{{ item['name'] }}</h3>
+                                <p>{{ item['description'] or t('index.no_description') }}</p>
+                                <span class="price">${{ "%.2f"|format(item['pricing']) }}</span>
+                                <span class="id"> | ID: {{ item['id'] }}</span>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
 
         <div class="more">
             <a href="/product_list">{{ t('index.more') }}</a>
