@@ -30,6 +30,11 @@ from backend.cart_handler import cartHandler_bp
 from decimal import Decimal
 from forms.sort import SortForm
 from i18n import normalize_lang, translate
+from flask_mail import Mail
+from data.email_utils import send_verification_email, save_verification_code, verify_code
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 api = Api(app)
@@ -43,6 +48,16 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "warning"
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'buysell22867@gmail.com'
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = 'buysell22867@gmail.com'
+
+mail = Mail()
+mail.init_app(app)
 
 APP_NAME = "BuySell"
 
@@ -120,7 +135,6 @@ def settings_page():
         th = request.form.get("theme", "dark")
         session["theme"] = th if th in ("dark", "light") else "dark"
         session.permanent = True
-        flash(translate(session["lang"], "settings.saved"), "success")
         return redirect(url_for("settings_page"))
     return render_template(
         "settings.html",
@@ -408,6 +422,7 @@ def register():
             )
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.email == form.email.data).first():
+            db_sess.close()
             return render_template(
                 "register.html",
                 title=f'{APP_NAME} > {translate(lc, "register.title")}',
@@ -419,18 +434,104 @@ def register():
             email=form.email.data,
             about=form.about.data,
             cart_contents=[],
+            confirmed=False,
         )
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
 
-        return redirect('/login')
+        code = save_verification_code(user, db_sess)
+        db_sess.close()
+
+        send_verification_email(app, form.email.data, code)
+
+        session['pending_verification_email'] = form.email.data
+        return redirect('/verify_email')
 
     return render_template(
         "register.html",
         title=f'{APP_NAME} > {translate(lc, "register.title")}',
         form=form,
     )
+
+
+@app.route('/verify_email', methods=['GET', 'POST'])
+def verify_email_page():
+    email = session.get('pending_verification_email')
+
+    if not email:
+        return redirect('/register')
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+
+        db_sess = db_session.create_session()
+        user = db_sess.query(User).filter(User.email == email).first()
+
+        if not user:
+            db_sess.close()
+            session.pop('pending_verification_email', None)
+            return redirect('/register')
+
+        is_valid, msg = verify_code(user, code)
+
+        if is_valid:
+            user.confirmed = True
+            user.email_verification_code = None
+            user.email_verification_expires = None
+            db_sess.commit()
+
+            user_id = user.id
+            db_sess.close()
+
+            session.pop('pending_verification_email', None)
+
+            new_db_sess = db_session.create_session()
+            fresh_user = new_db_sess.query(User).filter(User.id == user_id).first()
+            login_user(fresh_user)
+            new_db_sess.close()
+
+            return redirect('/home_page')
+        else:
+            db_sess.close()
+            return render_template(
+                'verify_email.html',
+                email=email,
+                message=msg,
+                message_type='danger'
+            )
+
+    return render_template('verify_email.html', email=email)
+
+@app.route('/resend_code')
+def resend_code():
+    email = session.get('pending_verification_email')
+
+    if not email:
+        return redirect('/register')
+
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).filter(User.email == email).first()
+
+    if not user:
+        db_sess.close()
+        session.pop('pending_verification_email', None)
+        return redirect('/register')
+
+    if user.confirmed:
+        db_sess.close()
+        session.pop('pending_verification_email', None)
+        return redirect('/login')
+    
+    code = save_verification_code(user, db_sess)
+    db_sess.close()
+
+
+    try:
+        send_verification_email(app, email, code)
+    except Exception:
+        return redirect('/verify_email')
+    return redirect('/verify_email')
 
 
 @app.route('/login', methods=['GET', 'POST'])
