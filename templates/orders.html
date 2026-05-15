@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Orders</h3>
+
+  <form method="POST" action="/orders/confirm">
+  {% if orders and orders|length > 0 %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <table class="table mt-2">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Transaction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in orders %}
+              <tr>
+                <td>{{ o.product_name }}</td>
+                <td>{{ o.quantity }}</td>
+                <td>{{ o.amount }}</td>
+                <td>{{ o.status_display }}</td>
+                <td>{{ o.transaction_id or '-' }}</td>
+              </tr>
+              <tr>
+                <td colspan="6">
+                  {% if o.status_display == 'pending' %}
+                    <button type="submit" name="order_id" value="{{ o.id }}" class="btn btn-success">Confirm</button>
+                  {% elif o.status_display == 'to_fulfill' %}
+                    <button type="submit" name="order_id" value="{{ o.id }}" class="btn btn-warning">Confirm</button>
+                  {% else %}
+                    <span class="text-muted">Fulfilled</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-warning mt-3">No orders yet.</div>
+  {% endif %}
+  </form>
+</div>
+{% endblock %}
+

@@ -21,7 +21,7 @@ from requests import get, post
 from werkzeug.utils import secure_filename
 
 from data import db_session
-from data.__all_models import User, Products, Chat
+from data.__all_models import User, Products, Chat, Order
 from forms.user import LoginForm, RegisterForm
 from backend.resources.product_api import ProductListResource, ProductResource
 from forms.product import ProductForm, ProductSearchForm
@@ -30,6 +30,11 @@ from backend.cart_handler import cartHandler_bp
 from decimal import Decimal
 from forms.sort import SortForm
 from i18n import normalize_lang, translate
+from flask_mail import Mail
+from data.email_utils import send_verification_email, save_verification_code, verify_code
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 api = Api(app)
@@ -43,6 +48,16 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "warning"
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'buysell22867@gmail.com'
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = 'buysell22867@gmail.com'
+
+mail = Mail()
+mail.init_app(app)
 
 APP_NAME = "BuySell"
 
@@ -120,7 +135,6 @@ def settings_page():
         th = request.form.get("theme", "dark")
         session["theme"] = th if th in ("dark", "light") else "dark"
         session.permanent = True
-        flash(translate(session["lang"], "settings.saved"), "success")
         return redirect(url_for("settings_page"))
     return render_template(
         "settings.html",
@@ -408,6 +422,7 @@ def register():
             )
         db_sess = db_session.create_session()
         if db_sess.query(User).filter(User.email == form.email.data).first():
+            db_sess.close()
             return render_template(
                 "register.html",
                 title=f'{APP_NAME} > {translate(lc, "register.title")}',
@@ -419,18 +434,104 @@ def register():
             email=form.email.data,
             about=form.about.data,
             cart_contents=[],
+            confirmed=False,
         )
         user.set_password(form.password.data)
         db_sess.add(user)
         db_sess.commit()
 
-        return redirect('/login')
+        code = save_verification_code(user, db_sess)
+        db_sess.close()
+
+        send_verification_email(app, form.email.data, code)
+
+        session['pending_verification_email'] = form.email.data
+        return redirect('/verify_email')
 
     return render_template(
         "register.html",
         title=f'{APP_NAME} > {translate(lc, "register.title")}',
         form=form,
     )
+
+
+@app.route('/verify_email', methods=['GET', 'POST'])
+def verify_email_page():
+    email = session.get('pending_verification_email')
+
+    if not email:
+        return redirect('/register')
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+
+        db_sess = db_session.create_session()
+        user = db_sess.query(User).filter(User.email == email).first()
+
+        if not user:
+            db_sess.close()
+            session.pop('pending_verification_email', None)
+            return redirect('/register')
+
+        is_valid, msg = verify_code(user, code)
+
+        if is_valid:
+            user.confirmed = True
+            user.email_verification_code = None
+            user.email_verification_expires = None
+            db_sess.commit()
+
+            user_id = user.id
+            db_sess.close()
+
+            session.pop('pending_verification_email', None)
+
+            new_db_sess = db_session.create_session()
+            fresh_user = new_db_sess.query(User).filter(User.id == user_id).first()
+            login_user(fresh_user)
+            new_db_sess.close()
+
+            return redirect('/home_page')
+        else:
+            db_sess.close()
+            return render_template(
+                'verify_email.html',
+                email=email,
+                message=msg,
+                message_type='danger'
+            )
+
+    return render_template('verify_email.html', email=email)
+
+@app.route('/resend_code')
+def resend_code():
+    email = session.get('pending_verification_email')
+
+    if not email:
+        return redirect('/register')
+
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).filter(User.email == email).first()
+
+    if not user:
+        db_sess.close()
+        session.pop('pending_verification_email', None)
+        return redirect('/register')
+
+    if user.confirmed:
+        db_sess.close()
+        session.pop('pending_verification_email', None)
+        return redirect('/login')
+    
+    code = save_verification_code(user, db_sess)
+    db_sess.close()
+
+
+    try:
+        send_verification_email(app, email, code)
+    except Exception:
+        return redirect('/verify_email')
+    return redirect('/verify_email')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -518,6 +619,45 @@ def checkout():
         subtotal=subtotal
     )
 
+@app.route("/orders")
+@login_required
+def orders_page():
+    db_sess = db_session.create_session()
+    try:
+        raw_orders = db_sess.query(Order).filter(
+
+            (Order.buyer_id == current_user.id) | (Order.seller_id == current_user.id)
+        ).all()
+
+        lc_orders = []
+        for o in raw_orders:
+            try:
+                product_name = str(o.product_id)
+
+            except Exception:
+                product_name = str(o.product_id)
+
+            status_display = o.status
+            if o.seller_id == current_user.id and o.status == "pending":
+                status_display = "to_fulfill"
+
+            lc_orders.append(
+                {
+                    "id": o.id,
+                    "product_id": o.product_id,
+                    "product_name": product_name,
+                    "quantity": o.quantity,
+                    "amount": o.amount,
+                    "status_display": status_display,
+                    "transaction_id": o.transaction_id,
+                }
+            )
+    finally:
+        db_sess.close()
+
+    return render_template("orders.html", orders=lc_orders, title=f"{APP_NAME} > Orders")
+
+
 @app.route("/balance")
 @login_required
 def balance():
@@ -583,12 +723,51 @@ def add_funds_confirm():
         "balance.html",
         title=f"{APP_NAME} > Balance",
         payment_method="wallet",
-
         transaction_id=transaction_id,
         paid_amount=amount,
         balance_demo=amount,
         wallet_balance=updated_balance,
     )
+
+
+@app.route("/orders/confirm", methods=["POST"])
+@login_required
+def order_confirm():
+    order_id_raw = request.form.get("order_id")
+    if not order_id_raw:
+        return redirect("/orders")
+
+    try:
+        order_id = int(order_id_raw)
+    except Exception:
+        return redirect("/orders")
+
+    db_sess = db_session.create_session()
+    try:
+        o = db_sess.get(Order, order_id)
+        if not o:
+            return redirect("/orders")
+
+        if o.buyer_id != current_user.id and o.seller_id != current_user.id:
+            return redirect("/orders")
+
+        is_buyer = o.buyer_id == current_user.id
+        is_seller = o.seller_id == current_user.id
+        if o.status == "pending":
+            if is_buyer:
+                o.status = "pending_buyer"
+            elif is_seller:
+                o.status = "to_fulfill"
+        elif o.status == "pending_buyer" and is_seller:
+            o.status = "fulfilled"
+        elif o.status == "to_fulfill" and is_buyer:
+            o.status = "fulfilled"
+
+        db_sess.commit()
+    finally:
+        db_sess.close()
+
+    return redirect("/orders")
 
 
 @app.route("/checkout/confirm", methods=["POST"])
@@ -650,34 +829,90 @@ def checkout_confirm():
 
 
 
-    try:
-        db_sess = db_session.create_session()
-        user_obj = db_sess.get(User, current_user.id)
+        try:
+            db_sess = db_session.create_session()
+            user_obj = db_sess.get(User, current_user.id)
 
-        current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
+            current_balance = Decimal(str(getattr(user_obj, "wallet_balance", 0.0) or 0.0))
 
-        new_balance = current_balance - subtotal
-        if new_balance < 0:
-            new_balance = Decimal("0.0")
-        user_obj.wallet_balance = float(new_balance)
+            new_balance = current_balance - subtotal
+            if new_balance < 0:
+                new_balance = Decimal("0.0")
+            user_obj.wallet_balance = float(new_balance)
+            cart_snapshot = list(current_user.cart_contents or [])
 
-        user_obj.cart_contents = []
-        db_sess.commit()
+            created_any = False
+            for item in cart_snapshot:
+                try:
+                    product_id = int(item.get("product_id"))
+                    quantity = int(item.get("quantity", 0))
+                except Exception:
+                    continue
 
-        updated_balance = getattr(user_obj, "wallet_balance", None)
-        db_sess.close()
-    except Exception:
-        updated_balance = None
+                if quantity <= 0:
+                    continue
 
-    return render_template(
-        "balance.html",
-        title=f"{APP_NAME} > Balance",
-        paid_amount=subtotal,
-        transaction_id=transaction_id,
-        payment_method=payment_method,
-        balance_demo=subtotal,
-        wallet_balance=updated_balance
-    )
+                product_resp = get(f"http://127.0.0.1:8080/api/product/{product_id}")
+                if product_resp.status_code != 200:
+                    continue
+
+                product_data = product_resp.json().get("product")
+                if not product_data:
+                    continue
+
+                seller_id = product_data.get("owner")
+                if seller_id is None:
+                    continue
+
+                pricing = product_data.get("pricing", 0) or 0
+                try:
+                    pricing_dec = Decimal(str(pricing))
+                except Exception:
+                    pricing_dec = Decimal("0.00")
+
+                line_amount = float(pricing_dec * quantity)
+
+
+                order = Order(
+                    buyer_id=current_user.id,
+                    seller_id=int(seller_id),
+
+
+                    product_id=product_id,
+                    quantity=quantity,
+                    amount=line_amount,
+                    status="pending",
+
+                    transaction_id=transaction_id,
+                    payment_method=payment_method,
+                )
+                db_sess.add(order)
+                created_any = True
+
+
+            if created_any:
+
+                user_obj.cart_contents = []
+
+            db_sess.commit()
+
+
+            updated_balance = getattr(user_obj, "wallet_balance", None)
+            db_sess.close()
+        except Exception:
+            updated_balance = None
+
+        return render_template(
+            "balance.html",
+            title=f"{APP_NAME} > Balance",
+            paid_amount=subtotal,
+            transaction_id=transaction_id,
+            payment_method=payment_method,
+            balance_demo=subtotal,
+            wallet_balance=updated_balance
+        )
+    else:
+        return make_response(jsonify({"error": "unimplemented"}))
 
 
 @app.route("/start_chat/<int:owner_id>/<int:product_id>")

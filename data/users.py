@@ -24,6 +24,10 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
     cart_contents = Column(JSON, default=list)
     wallet_balance = Column(DECIMAL, nullable=False, default=0.0)
 
+    confirmed = Column(Boolean, default=False)
+    email_verification_code = Column(String, nullable=True)
+    email_verification_expires = Column(DateTime, nullable=True)
+
     def __repr__(self):
         return f"{self.username}: {self.joined_date}"
     
